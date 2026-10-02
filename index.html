@@ -634,9 +634,47 @@ async function delProduct(p) {
 
 async function upload(file, folder, cb) {
   if (!live) return URL.createObjectURL(file);
-  const ref = st.ref(`${folder}/${Date.now()}_${file.name.replace(/[^\w.\-]/g, '_')}`);
-  const t = ref.put(file, { cacheControl: 'public,max-age=31536000', contentType: file.type || undefined }); t.on('state_changed', x => cb && cb(x.bytesTransferred / x.totalBytes));
-  await t; return ref.getDownloadURL();
+  if (!file) throw new Error('No file selected');
+
+  const safeName = file.name.replace(/[^\w.\-]/g, '_');
+  const path = `${folder}/${Date.now()}_${Math.random().toString(36).slice(2, 8)}_${safeName}`;
+  const ref = st.ref(path);
+  const metadata = {
+    cacheControl: 'public,max-age=31536000',
+    contentType: file.type || (folder === 'manuals' ? 'application/pdf' : 'application/octet-stream')
+  };
+
+  // Firebase Storage's put() is resumable.  Keep the task alive and expose
+  // both progress and errors instead of waiting on the task like a Promise.
+  const run = () => new Promise((resolve, reject) => {
+    const task = ref.put(file, metadata);
+    task.on('state_changed',
+      snap => {
+        const q = snap.totalBytes ? snap.bytesTransferred / snap.totalBytes : 0;
+        if (cb) cb(Math.max(0, Math.min(1, q)), snap);
+      },
+      err => reject(err),
+      async () => {
+        try {
+          if (cb) cb(1);
+          resolve(await ref.getDownloadURL());
+        } catch (err) { reject(err); }
+      }
+    );
+  });
+
+  let lastErr;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      return await run();
+    } catch (err) {
+      lastErr = err;
+      if (attempt < 3) {
+        await new Promise(r => setTimeout(r, 800 * attempt));
+      }
+    }
+  }
+  throw lastErr || new Error('Upload failed');
 }
 
 async function squeeze(f, max = 1600, q = .82) {
@@ -656,9 +694,20 @@ async function squeeze(f, max = 1600, q = .82) {
 }
 let bgJobs = 0;
 addEventListener('beforeunload', e => { if (bgJobs) { e.preventDefault(); e.returnValue = ''; } });
-function tracker(on) {
-  const parts = [];
-  return { part(size) { const o = { l: 0, t: Math.max(size, 1) }; parts.push(o); return q => { o.l = q * o.t; on(parts.reduce((a, x) => a + x.l, 0) / parts.reduce((a, x) => a + x.t, 0)); }; } };
+function tracker(on, totalBytes = 1) {
+  let loadedBytes = 0, lastBytes = 0;
+  return {
+    start() { loadedBytes = 0; lastBytes = 0; },
+    part(size) {
+      lastBytes = 0;
+      return q => {
+        const now = Math.max(0, Math.min(1, q)) * Math.max(size, 1);
+        loadedBytes += now - lastBytes;
+        lastBytes = now;
+        on(Math.max(0, Math.min(1, loadedBytes / Math.max(totalBytes, 1))));
+      };
+    }
+  };
 }
 function setBar(q, txt) {
   const b = $('upBar'); if (q === null) { b.style.display = 'none'; return; }
@@ -733,22 +782,50 @@ $('fAdd').onsubmit = async e => {
   else { local.id = ref ? ref.id : 'l' + Date.now(); products.unshift(local); target = local; }
   pend = []; renderNew(); $('dAdd').close(); render(); toast('Saving…');
   bgJobs++;
-  /* 1) save the details to Firebase immediately */
+  /* 1) Save the product record immediately. Files continue in the background. */
   const w0 = !live ? Promise.resolve() : ed ? ref.update(early) : ref.set({ ...early, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
   const hasFiles = pendNow.length || mf || accNow.some(a => a.file);
   try {
-    if (!hasFiles) { await w0; toast('Product saved'); }
-    else {
-      setBar(0);
-      const tr = tracker(q => setBar(q));
-      const up = (file, folder) => upload(file, folder, tr.part(file.size));
-      /* 2) compress + upload all files together in the background */
-      const [added, accessories, manualUrl] = await Promise.all([
-        Promise.all(pendNow.map(async x => { await x.ready; return { url: await up(x.file, 'media'), type: x.type, name: x.file.name }; })),
-        Promise.all(accNow.map(async a => { if (a.ready) await a.ready; return { name: a.name.trim(), image: a.file ? await up(a.file, 'accessories') : (a.url || '') }; })),
-        mf ? up(mf, 'manuals') : Promise.resolve(null)
-      ]);
-      await w0;
+    await w0;
+    toast(hasFiles ? 'Product saved — files uploading in background…' : 'Product saved');
+    if (hasFiles) {
+      setBar(0, 'Preparing file upload…');
+      const totalBytes = (mf ? mf.size : 0) + pendNow.reduce((n, x) => n + (x.file?.size || 0), 0) + accNow.reduce((n, a) => n + (a.file?.size || 0), 0);
+      let completedBytes = 0;
+      const up = async (file, folder, label) => {
+        const base = completedBytes;
+        const url = await upload(file, folder, (q) => {
+          const overall = (base + file.size * q) / Math.max(totalBytes, 1);
+          setBar(overall, label ? `${label} ${Math.round(q * 100)}%` : `Uploading ${Math.round(overall * 100)}%`);
+        });
+        completedBytes += file.size;
+        setBar(completedBytes / Math.max(totalBytes, 1), label ? `${label} 100%` : undefined);
+        return url;
+      };
+
+      // PDF first, then media/accessories. The product itself is already saved,
+      // so the user does not wait for a large PDF before the record exists.
+      let manualUrl = null;
+      if (mf) {
+        setBar(completedBytes / Math.max(totalBytes, 1), 'Uploading PDF 0%');
+        manualUrl = await up(mf, 'manuals', 'Uploading PDF');
+      }
+
+      const added = [];
+      for (const x of pendNow) {
+        await x.ready;
+        const url = await up(x.file, 'media', 'Uploading media');
+        added.push({ url, type: x.type, name: x.file.name });
+      }
+
+      const accessories = [];
+      for (const a of accNow) {
+        if (a.ready) await a.ready;
+        accessories.push({
+          name: a.name.trim(),
+          image: a.file ? await up(a.file, 'accessories', 'Uploading accessory') : (a.url || '')
+        });
+      }
       const all = [...keepNow, ...added];
       const images = all.filter(m => m.type === 'image').map(m => m.url);
       let manual = oldManual, manualType = manualType0;
