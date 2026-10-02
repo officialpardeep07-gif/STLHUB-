@@ -100,6 +100,7 @@ label{display:block;font-weight:700;font-size:14px;margin:14px 0 4px}
 input,textarea,select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--txt);font:500 15px Manrope,sans-serif}
 .note{font-size:13px;color:var(--mut);margin-top:12px}
 .pw{position:relative}.pw input{padding-right:46px}.pw button{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:38px;height:38px;border:0;background:none;color:var(--mut);cursor:pointer;display:grid;place-items:center;border-radius:8px}.pw button:hover{color:var(--txt);background:var(--mist)}.pw button:focus-visible{outline:2px solid var(--blue)}.pw svg{width:20px;height:20px}
+#upBar{position:fixed;left:50%;bottom:72px;transform:translateX(-50%);width:min(320px,90vw);background:var(--ink);color:#fff;border-radius:14px;padding:10px 14px;font-weight:600;font-size:13px;display:none;z-index:60;box-shadow:0 6px 24px rgba(0,0,0,.25)}#upBar i{display:block;height:4px;border-radius:4px;background:rgba(255,255,255,.25);margin-top:7px;overflow:hidden}#upBar b{display:block;height:100%;width:0;background:#4ade80;transition:width .2s}
 #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 20px;border-radius:99px;font-weight:500;display:none;z-index:50}
 .mode{background:var(--amber);color:#3A2700;font-size:13px;font-weight:700;text-align:center;padding:6px}
 #home,#products,#manuals,#about,#contact{display:none}
@@ -430,6 +431,7 @@ body:not([data-view=home]) .hero .wrap,body.single .hero .wrap{padding-top:44px;
   <p class="note">Changes are visible to all visitors. For photo / video slots you can choose any file.</p></form></dialog>
 
 
+<div id="upBar"><span id="upTxt">Saving…</span><i><b id="upFill"></b></i></div>
 <div id="toast" role="status"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
@@ -505,7 +507,7 @@ function renderAcc() {
   $('acBox').innerHTML = acc.map((a, i) => `<div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap"><div style="width:56px;height:56px">${a.prev || a.url ? `<img src="${esc(a.prev || a.url)}" alt="" style="width:56px;height:56px;object-fit:contain;border:1px solid var(--line);border-radius:8px">` : ''}</div><input data-an="${i}" value="${esc(a.name)}" placeholder="Accessory name" style="flex:1;min-width:140px"><input type="file" accept="image/*" data-af="${i}" style="flex:1;min-width:140px"><button type="button" class="x" data-ar="${i}" aria-label="Remove accessory">✕</button></div>`).join('');
 }
 $('acBox').addEventListener('input', e => { const i = e.target.dataset.an; if (i !== undefined) acc[+i].name = e.target.value; });
-$('acBox').addEventListener('change', e => { const i = e.target.dataset.af, f = e.target.files && e.target.files[0]; if (i !== undefined && f) { acc[+i].file = f; acc[+i].prev = URL.createObjectURL(f); renderAcc(); } });
+$('acBox').addEventListener('change', e => { const i = e.target.dataset.af, f = e.target.files && e.target.files[0]; if (i !== undefined && f) { const a = acc[+i]; a.file = f; a.prev = URL.createObjectURL(f); a.ready = squeeze(f, 900, .85).then(nf => { a.file = nf; }); renderAcc(); } });
 $('acBox').addEventListener('click', e => { const i = e.target.dataset.ar; if (i !== undefined) { acc.splice(+i, 1); renderAcc(); } });
 $('acAdd').onclick = () => { acc.push({ name: '' }); renderAcc(); };
 const secs = p => {
@@ -633,8 +635,34 @@ async function delProduct(p) {
 async function upload(file, folder, cb) {
   if (!live) return URL.createObjectURL(file);
   const ref = st.ref(`${folder}/${Date.now()}_${file.name.replace(/[^\w.\-]/g, '_')}`);
-  const t = ref.put(file); t.on('state_changed', x => cb && cb(x.bytesTransferred / x.totalBytes));
+  const t = ref.put(file, { cacheControl: 'public,max-age=31536000', contentType: file.type || undefined }); t.on('state_changed', x => cb && cb(x.bytesTransferred / x.totalBytes));
   await t; return ref.getDownloadURL();
+}
+
+async function squeeze(f, max = 1600, q = .82) {
+  if (!f.type.startsWith('image/') || /gif|svg/.test(f.type) || f.size < 150 * 1024) return f;
+  try {
+    const bmp = await createImageBitmap(f, { imageOrientation: 'from-image' });
+    const sc = Math.min(1, max / Math.max(bmp.width, bmp.height)), w = Math.round(bmp.width * sc), h = Math.round(bmp.height * sc);
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    const x = c.getContext('2d'), png = f.type === 'image/png';
+    if (!png) { x.fillStyle = '#fff'; x.fillRect(0, 0, w, h); }
+    x.drawImage(bmp, 0, 0, w, h); if (bmp.close) bmp.close();
+    const type = png ? 'image/png' : 'image/jpeg';
+    const blob = await new Promise(r => c.toBlob(r, type, q));
+    if (!blob || blob.size >= f.size) return f;
+    return new File([blob], f.name.replace(/\.\w+$/, '') + (png ? '.png' : '.jpg'), { type });
+  } catch (e) { return f; }
+}
+let bgJobs = 0;
+addEventListener('beforeunload', e => { if (bgJobs) { e.preventDefault(); e.returnValue = ''; } });
+function tracker(on) {
+  const parts = [];
+  return { part(size) { const o = { l: 0, t: Math.max(size, 1) }; parts.push(o); return q => { o.l = q * o.t; on(parts.reduce((a, x) => a + x.l, 0) / parts.reduce((a, x) => a + x.t, 0)); }; } };
+}
+function setBar(q, txt) {
+  const b = $('upBar'); if (q === null) { b.style.display = 'none'; return; }
+  b.style.display = 'block'; $('upFill').style.width = Math.round(q * 100) + '%'; $('upTxt').textContent = txt || ('Saving in background… ' + Math.round(q * 100) + '%');
 }
 
 async function delFile(url) {
@@ -645,7 +673,7 @@ function renderNew() {
   $('newBox').hidden = !pend.length;
   $('newImgs').innerHTML = pend.map((x, i) => `<div style="position:relative;text-align:center">${thumb(x)}<button type="button" class="x" data-rmn="${i}" aria-label="Remove file" style="position:absolute;top:-6px;right:-6px;width:22px;height:22px;font-size:11px">✕</button>${x.type === 'image' ? `<button type="button" class="chip" data-crn="${i}" style="margin-top:6px;padding:4px 14px">Crop</button>` : ''}</div>`).join('');
 }
-function addPend(f) { pend.push({ file: f, url: URL.createObjectURL(f), type: ftype(f) }); renderNew(); }
+function addPend(f) { const o = { file: f, url: URL.createObjectURL(f), type: ftype(f) }; o.ready = squeeze(f).then(nf => { o.file = nf; }); pend.push(o); renderNew(); }
 function openCrop(i) {
   cropIdx = i;
   const img = $('cImg');
@@ -658,13 +686,13 @@ $('aI').onchange = e => { [...e.target.files].forEach(addPend); e.target.value =
 $('cRot').onclick = () => cropper && cropper.rotate(90);
 $('cFull').onclick = () => $('dCrop').close();
 $('cOk').onclick = () => {
-  const c = cropper.getCroppedCanvas({ maxWidth: 2000, maxHeight: 2000, fillColor: '#fff' });
+  const c = cropper.getCroppedCanvas({ maxWidth: 1600, maxHeight: 1600, fillColor: '#fff' });
   c.toBlob(b => {
     const f = new File([b], 'photo.jpg', { type: 'image/jpeg' });
     URL.revokeObjectURL(pend[cropIdx].url);
     pend[cropIdx] = { file: f, url: URL.createObjectURL(f), type: 'image' };
     renderNew(); $('dCrop').close();
-  }, 'image/jpeg', .92);
+  }, 'image/jpeg', .85);
 };
 $('dCrop').addEventListener('close', () => { if (cropper) { cropper.destroy(); cropper = null; } });
 function renderOld() {
@@ -687,38 +715,62 @@ function openForm(p) {
 }
 $('fAdd').onsubmit = async e => {
   e.preventDefault();
-  const b = $('aS'); b.disabled = true; b.textContent = 'Saving…';
+  /* snapshot everything and close at once - nothing is awaited before this */
+  const ed = editing, prev = ed ? { ...ed } : null;
+  const keepNow = [...keep], pendNow = [...pend], accNow = acc.filter(a => a.name.trim() || a.file || a.url).map(a => ({ ...a }));
+  const mf = $('aF').files[0], rmM = $('rmM').checked;
+  const oldManual = ed ? ed.manual || '' : '', oldType = ed ? mType(ed) : 'pdf';
+  const fields = { name: $('aN').value.trim(), model: $('aM').value.trim(), category: $('aC').value.trim(), desc: $('aD').value.trim(), features: lines($('aFe').value), specs: lines($('aSp').value) };
+  const manualType0 = mf ? ftype(mf) : oldType;
+  const lm = [...keepNow, ...pendNow.map(x => ({ url: x.url, type: x.type, name: x.file.name }))];
+  const local = { ...fields, images: lm.filter(m => m.type === 'image').map(m => m.url), media: lm, manual: mf ? URL.createObjectURL(mf) : (rmM ? '' : oldManual), manualType: manualType0, accessories: accNow.map(a => ({ name: a.name.trim(), image: a.prev || a.url || '' })) };
+  /* what goes to Firebase right now: text + already-uploaded files only (never blob: urls) */
+  const early = { ...fields, images: keepNow.filter(m => m.type === 'image').map(m => m.url), media: keepNow, manual: rmM ? '' : oldManual, manualType: oldType, accessories: accNow.map(a => ({ name: a.name.trim(), image: a.url || '' })) };
+  let ref = null;
+  if (live) ref = ed ? db.collection('products').doc(ed.id) : db.collection('products').doc();
+  let target;
+  if (ed) { Object.assign(ed, local); target = ed; }
+  else { local.id = ref ? ref.id : 'l' + Date.now(); products.unshift(local); target = local; }
+  pend = []; renderNew(); $('dAdd').close(); render(); toast('Saving…');
+  bgJobs++;
+  /* 1) save the details to Firebase immediately */
+  const w0 = !live ? Promise.resolve() : ed ? ref.update(early) : ref.set({ ...early, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+  const hasFiles = pendNow.length || mf || accNow.some(a => a.file);
   try {
-    const prog = q => b.textContent = 'Uploading ' + Math.round(q * 100) + '%';
-    const added = await Promise.all(pend.map(async x => ({ url: await upload(x.file, 'media', prog), type: x.type, name: x.file.name })));
-    const all = [...keep, ...added];
-    const images = all.filter(m => m.type === 'image').map(m => m.url);
-    const accessories = await Promise.all(acc.filter(a => a.name.trim() || a.file || a.url).map(async a => ({ name: a.name.trim(), image: a.file ? await upload(a.file, 'accessories', prog) : (a.url || '') })));
-    const mf = $('aF').files[0];
-    let manual = editing ? editing.manual || '' : ''; let manualType = editing ? mType(editing) : 'pdf';
-    const oldManual = manual;
-    if (mf) { manual = await upload(mf, 'manuals', prog); manualType = ftype(mf); }
-    else if ($('rmM').checked) manual = '';
-    const data = { name: $('aN').value.trim(), model: $('aM').value.trim(), category: $('aC').value.trim(), desc: $('aD').value.trim(), images, media: all, manual, manualType, features: lines($('aFe').value), specs: lines($('aSp').value), accessories };
-    if (editing) {
-      if (live) await db.collection('products').doc(editing.id).update(data);
-      const gone = media(editing).filter(m => !keep.some(k => k.url === m.url)).map(m => m.url);
-      (editing.accessories || []).forEach(o => { if (o.image && !accessories.some(a => a.image === o.image)) gone.push(o.image); });
-      if (oldManual && oldManual !== manual) gone.push(oldManual);
-      await Promise.all(gone.map(delFile));
-      Object.assign(editing, data);
-    } else {
-      if (live) {
-        data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-        data.id = (await db.collection('products').add(data)).id;
-      } else data.id = 'l' + Date.now();
-      products.unshift(data);
+    if (!hasFiles) { await w0; toast('Product saved'); }
+    else {
+      setBar(0);
+      const tr = tracker(q => setBar(q));
+      const up = (file, folder) => upload(file, folder, tr.part(file.size));
+      /* 2) compress + upload all files together in the background */
+      const [added, accessories, manualUrl] = await Promise.all([
+        Promise.all(pendNow.map(async x => { await x.ready; return { url: await up(x.file, 'media'), type: x.type, name: x.file.name }; })),
+        Promise.all(accNow.map(async a => { if (a.ready) await a.ready; return { name: a.name.trim(), image: a.file ? await up(a.file, 'accessories') : (a.url || '') }; })),
+        mf ? up(mf, 'manuals') : Promise.resolve(null)
+      ]);
+      await w0;
+      const all = [...keepNow, ...added];
+      const images = all.filter(m => m.type === 'image').map(m => m.url);
+      let manual = oldManual, manualType = manualType0;
+      if (mf) manual = manualUrl; else if (rmM) manual = '';
+      const data = { ...fields, images, media: all, manual, manualType, accessories };
+      if (live) await ref.update(data);
+      if (ed) {
+        const gone = media(prev).filter(m => !keepNow.some(k => k.url === m.url)).map(m => m.url);
+        (prev.accessories || []).forEach(o => { if (o.image && !accessories.some(a => a.image === o.image)) gone.push(o.image); });
+        if (oldManual && oldManual !== manual) gone.push(oldManual);
+        Promise.all(gone.map(delFile));
+      }
+      Object.assign(target, data);
+      render(); toast('Product saved');
     }
-    pend = []; renderNew();
-    $('dAdd').close(); render(); toast('Product saved');
-    if (document.body.classList.contains('single') && editing) openProduct(editing.id, false, 'page');
-  } catch (err) { toast('Save failed: ' + err.message); }
-  b.disabled = false; b.textContent = 'Save product';
+    if (document.body.classList.contains('single') && ed) openProduct(ed.id, false, 'page');
+  } catch (err) {
+    /* details are already in Firebase; only the file upload failed */
+    Object.assign(target, early); render();
+    toast('Details saved, but file upload failed: ' + err.message + '. Edit the product to add the files again.');
+  }
+  bgJobs--; if (!bgJobs) setBar(null);
 };
 
 function setAdmin(v) {
