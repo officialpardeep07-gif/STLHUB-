@@ -258,6 +258,11 @@ footer{position:relative}footer .wrap{padding-right:56px}
 #adm{position:absolute;right:12px;bottom:10px;transform:none;will-change:auto;z-index:30}
 body #home,body.single #home{display:block!important}
 body:not([data-view=home]) .hero .wrap,body.single .hero .wrap{padding-top:44px;padding-bottom:48px}
+.hline{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.hline h1{margin:0}
+.fbdot{width:14px;height:14px;border-radius:50%;flex:none;background:#ef4444;box-shadow:0 0 0 4px rgba(239,68,68,.28);transition:background .3s,box-shadow .3s}
+.fbdot.on{background:#22c55e;box-shadow:0 0 0 4px rgba(34,197,94,.3);animation:fbPulse 2.2s ease-in-out infinite}
+@keyframes fbPulse{0%,100%{box-shadow:0 0 0 3px rgba(34,197,94,.3)}50%{box-shadow:0 0 0 8px rgba(34,197,94,.08)}}
 </style>
 </head>
 <body>
@@ -285,7 +290,7 @@ body:not([data-view=home]) .hero .wrap,body.single .hero .wrap{padding-top:44px;
  </div>
  <svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="48" fill="none" stroke="#fff" stroke-width="2"/><path d="M10 38h80M10 62h80" stroke="#fff" stroke-width="6"/></svg>
  <div class="wrap">
-  <h1 class="shine">Sanchar Telesystems Limited</h1>
+  <div class="hline"><h1 class="shine">Sanchar Telesystems Limited</h1><span class="fbdot" id="fbDot" role="status" aria-label="Firebase status" title="Firebase: checking…"></span><small id="fbTxt" style="color:#B9C7EA;font-size:13px">checking…</small></div>
   <p>Photos and user manuals of Sanchar Telesystems products – view or download them anytime, anywhere, on your mobile.</p>
   <form class="search" id="heroSearch" role="search">
    <input id="q" type="search" placeholder="Enter product or model name" aria-label="Search products">
@@ -433,7 +438,14 @@ body:not([data-view=home]) .hero .wrap,body.single .hero .wrap{padding-top:44px;
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script>
 /* ====== PASTE YOUR FIREBASE CONFIG HERE ====== */
-const CFG = { apiKey:"", authDomain:"", projectId:"", storageBucket:"", appId:"" };
+const CFG = {
+  apiKey: "AIzaSyAZqnCuT6XTvyuVdr2Fq6Sfr0_cIGkyqik",
+  authDomain: "stlhub1-9b2cc.firebaseapp.com",
+  projectId: "stlhub1-9b2cc",
+  storageBucket: "stlhub1-9b2cc.firebasestorage.app",
+  messagingSenderId: "889625547315",
+  appId: "1:889625547315:web:6f510124e45f558dd60946"
+};
 /* ===================================================== */
 
 /* Once the website is online, write its address here, e.g. "https://sanchartelesystems.web.app/" – product links are built from it */
@@ -456,6 +468,28 @@ if (live) {
     {id:'d2', name:'Sample Product 2', model:'ST-R400', category:'', desc:'Demo entry – real data will appear once Firebase is connected.', images:[], manual:''}
   ];
 }
+
+/* Firebase status dot: green = Firestore reachable, red = not configured / offline / unreachable */
+function setDot(ok, msg) { const d = $('fbDot'); if (!d) return; d.classList.toggle('on', ok); d.title = 'Firebase: ' + msg; const t = $('fbTxt'); if (t) t.textContent = msg; d.setAttribute('aria-label', 'Firebase ' + msg); }
+async function checkFb() {
+  if (!live) { setDot(false, 'not configured'); return; }
+  if (!navigator.onLine) { setDot(false, 'offline'); return; }
+  try {
+    await Promise.race([
+      db.collection('settings').doc('site').get({ source: 'server' }),
+      new Promise((_, rej) => setTimeout(() => rej({ code: 'timeout' }), 8000))
+    ]);
+    setDot(true, 'connected');
+  } catch (e) {
+    /* permission-denied still means the server answered, so the connection itself is fine */
+    if (e && e.code === 'permission-denied') setDot(true, 'connected');
+    else { console.error('Firebase check failed:', e); setDot(false, 'not connected' + (e && e.code ? ' (' + e.code + ')' : '') + (e && e.message && e.code !== 'timeout' ? ' – ' + e.message.slice(0, 90) : '')); }
+  }
+}
+checkFb();
+addEventListener('online', checkFb);
+addEventListener('offline', () => setDot(false, 'offline'));
+setInterval(checkFb, 30000);
 
 const ftype = f => f.type.startsWith('image/') ? 'image' : f.type.startsWith('video/') ? 'video' : f.type === 'application/pdf' ? 'pdf' : 'file';
 const ICON = { video: '🎬', pdf: '📄', file: '📎' };
