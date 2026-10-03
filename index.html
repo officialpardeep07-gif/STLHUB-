@@ -265,6 +265,10 @@ body:not([data-view=home]) .hero .wrap,body.single .hero .wrap{padding-top:44px;
 .fbdot{width:14px;height:14px;border-radius:50%;flex:none;background:#ef4444;box-shadow:0 0 0 4px rgba(239,68,68,.28);transition:background .3s,box-shadow .3s}
 .fbdot.on{background:#22c55e;box-shadow:0 0 0 4px rgba(34,197,94,.3);animation:fbPulse 2.2s ease-in-out infinite}
 @keyframes fbPulse{0%,100%{box-shadow:0 0 0 3px rgba(34,197,94,.3)}50%{box-shadow:0 0 0 8px rgba(34,197,94,.08)}}
+
+/* Shared product link: show ONLY that product (no menu, hero, other products, contact/about, admin) */
+body.single nav .links,body.single #burger,body.single #home,body.single .hero,body.single #backAll,body.single #adm,body.single #mode,body.single #products,body.single #manuals,body.single #about,body.single #contact,body.single #aboutMini{display:none!important}
+body.single .brand{pointer-events:none;cursor:default}
 </style>
 </head>
 <body>
@@ -406,8 +410,7 @@ body:not([data-view=home]) .hero .wrap,body.single .hero .wrap{padding-top:44px;
   <div id="oldBox" hidden><label>Existing files (remove with ✕)</label><div class="th" id="oldImgs"></div></div>
   <label>Choose photos, videos, PDFs or any other files. For photos, press "Crop" under the photo to crop it.</label><input id="aI" type="file" multiple>
   <div id="newBox" hidden><label>Files to be uploaded</label><div class="th" id="newImgs"></div></div>
-  <label>Manual (any file, usually PDF). A new file replaces the old manual.</label><input id="aF" type="file">
-  <label id="oldM" hidden style="font-weight:500"><input type="checkbox" id="rmM" style="width:auto;margin-right:6px">Remove existing manual</label>
+  <label>Manual – Google Drive link (Drive mein: Share → "Anyone with the link" → Viewer). Khali chhodein to koi manual nahi.</label><input id="aF" type="text" inputmode="url" placeholder="https://drive.google.com/file/d/.../view?usp=sharing" autocomplete="off">
   <div class="acts"><button class="btn" id="aS" type="submit">Save product</button></div>
  </form></dialog>
 
@@ -503,8 +506,13 @@ const ftype = f => f.type.startsWith('image/') ? 'image' : f.type.startsWith('vi
 const ICON = { video: '🎬', pdf: '📄', file: '📎' };
 const media = p => p.media || (p.images || []).map(u => ({ url: u, type: 'image' }));
 const mType = p => p.manualType || 'pdf';
+/* Google Drive links: view (embed), download and open-in-new-tab URLs from any share link */
+const driveId = u => { u = String(u || ''); if (!/(^|\/\/)drive\.google\.com\//i.test(u)) return ''; const m = u.match(/\/d\/([\w-]{10,})/) || u.match(/[?&]id=([\w-]{10,})/); return m ? m[1] : ''; };
+const mView = u => { const i = driveId(u); return i ? 'https://drive.google.com/file/d/' + i + '/preview' : u; };
+const mDown = u => { const i = driveId(u); return i ? 'https://drive.google.com/uc?export=download&id=' + i : u; };
+const mOpen = u => { const i = driveId(u); return i ? 'https://drive.google.com/file/d/' + i + '/view' : u; };
 const mHTML = (m, alt) => m.type === 'video' ? `<video src="${esc(m.url)}" controls playsinline style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain"></video>` : m.type === 'pdf' ? `<iframe src="${esc(m.url)}" style="position:absolute;inset:0;width:100%;height:100%;margin:0;border:0"></iframe>` : m.type === 'file' ? `<a class="btn" href="${esc(m.url)}" target="_blank" rel="noopener" download style="position:relative">Download ${esc(m.name || 'file')}</a>` : `<img src="${esc(m.url)}" alt="${esc(alt)}">`;
-const frame = (u, t) => t === 'video' ? `<video src="${esc(u)}" controls playsinline style="width:100%;margin-top:16px;border-radius:10px"></video>` : t === 'image' ? `<img src="${esc(u)}" alt="" style="width:100%;margin-top:16px;border-radius:10px">` : t === 'pdf' ? `<iframe src="${esc(u)}" title="Manual"></iframe>` : '';
+const frame = (u, t) => t === 'video' ? `<video src="${esc(u)}" controls playsinline style="width:100%;margin-top:16px;border-radius:10px"></video>` : t === 'image' ? `<img src="${esc(u)}" alt="" style="width:100%;margin-top:16px;border-radius:10px">` : t === 'pdf' ? `<iframe src="${esc(mView(u))}" title="Manual" allow="autoplay" loading="lazy"></iframe>` : '';
 const thumb = m => m.type === 'image' ? `<img src="${esc(m.url)}" alt="">` : `<div class="ft">${ICON[m.type] || '📎'}<br>${esc(m.name || (m.file && m.file.name) || 'File')}</div>`;
 let acc = [];
 const lines = v => v.split('\n').map(x => x.trim()).filter(Boolean);
@@ -520,7 +528,7 @@ const secs = p => {
   if (f.length) o.push(['Features', () => `<ul style="margin:0 0 0 20px">${f.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`]);
   if (sp.length) o.push(['Specifications', () => `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">${sp.map(x => { const i = x.indexOf(':'); return i > 0 ? `<tr><th style="text-align:left;background:var(--mist);width:40%;${td}">${esc(x.slice(0, i).trim())}</th><td style="${td}">${esc(x.slice(i + 1).trim())}</td></tr>` : `<tr><td colspan="2" style="${td}">${esc(x)}</td></tr>`; }).join('')}</table></div>`]);
   if (ac.length) o.push(['Accessories', () => `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:14px">${ac.map(a => `<div style="text-align:center"><div style="aspect-ratio:1;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff">${a.image ? `<img src="${esc(a.image)}" alt="${esc(a.name)}" style="width:100%;height:100%;object-fit:contain;display:block">` : ''}</div><small style="display:block;margin-top:6px;font-weight:700;color:var(--txt)">${esc(a.name)}</small></div>`).join('')}</div>`]);
-  if (p.manual) o.push(['Manual', () => `<div class="acts" style="margin:0 0 8px"><a class="btn" href="${esc(p.manual)}" target="_blank" rel="noopener" download>Download</a></div>${frame(p.manual, mType(p))}`]);
+  if (p.manual) o.push(['Manual', () => `<div class="acts" style="margin:0 0 8px"><a class="btn" href="${esc(mDown(p.manual))}" target="_blank" rel="noopener">Download</a><a class="btn ghost" href="${esc(mOpen(p.manual))}" target="_blank" rel="noopener">Open in new tab</a></div>${frame(p.manual, mType(p))}`]);
   return o;
 };
 const BGS = [
@@ -571,7 +579,7 @@ function render() {
   $('mlist').innerHTML = withM.length ? withM.map(p => `
     <div class="row"><div class="t"><b>${esc(p.name)}</b><span>${esc(p.model || '')} ${p.category ? '· ' + esc(p.category) : ''}</span></div>
     <button class="btn ghost" data-view="${p.id}">Read online</button>
-    <a class="btn" href="${esc(p.manual)}" target="_blank" rel="noopener" download>Download</a></div>`).join('') : '<div class="empty">No manuals uploaded yet.</div>';
+    <a class="btn" href="${esc(mDown(p.manual))}" target="_blank" rel="noopener">Download</a></div>`).join('') : '<div class="empty">No manuals uploaded yet.</div>';
   
 }
 
@@ -780,7 +788,7 @@ function openForm(p) {
   pend = []; renderNew();
   $('aT').textContent = p ? 'Edit product' : 'Add product';
   if (p) { $('aN').value = p.name; $('aM').value = p.model || ''; $('aC').value = p.category || ''; $('aD').value = p.desc || ''; }
-  $('oldM').hidden = !(p && p.manual);
+  $('aF').value = p ? (p.manual || '') : '';
   renderOld();
   $('dAdd').showModal();
 }
@@ -789,14 +797,16 @@ $('fAdd').onsubmit = async e => {
   /* snapshot everything and close at once - nothing is awaited before this */
   const ed = editing, prev = ed ? { ...ed } : null;
   const keepNow = [...keep], pendNow = [...pend], accNow = acc.filter(a => a.name.trim() || a.file || a.url).map(a => ({ ...a }));
-  const mf = $('aF').files[0], rmM = $('rmM').checked;
+  const manualIn = $('aF').value.trim();
+  if (manualIn && !/^https?:\/\//i.test(manualIn)) { toast('Manual link https:// se shuru hona chahiye', 6000); return; }
+  if (/drive\.google\.com\/drive\/(u\/\d+\/)?folders/i.test(manualIn)) { toast('Folder ka nahi, PDF file ka link dalein', 6000); return; }
   const oldManual = ed ? ed.manual || '' : '', oldType = ed ? mType(ed) : 'pdf';
   const fields = { name: $('aN').value.trim(), model: $('aM').value.trim(), category: $('aC').value.trim(), desc: $('aD').value.trim(), features: lines($('aFe').value), specs: lines($('aSp').value) };
-  const manualType0 = mf ? ftype(mf) : oldType;
+  const manual = manualIn, manualType0 = manualIn === oldManual ? oldType : 'pdf';
   const lm = [...keepNow, ...pendNow.map(x => ({ url: x.url, type: x.type, name: x.file.name }))];
-  const local = { ...fields, images: lm.filter(m => m.type === 'image').map(m => m.url), media: lm, manual: mf ? URL.createObjectURL(mf) : (rmM ? '' : oldManual), manualType: manualType0, accessories: accNow.map(a => ({ name: a.name.trim(), image: a.prev || a.url || '' })) };
+  const local = { ...fields, images: lm.filter(m => m.type === 'image').map(m => m.url), media: lm, manual, manualType: manualType0, accessories: accNow.map(a => ({ name: a.name.trim(), image: a.prev || a.url || '' })) };
   /* what goes to Firebase right now: text + already-uploaded files only (never blob: urls) */
-  const early = { ...fields, images: keepNow.filter(m => m.type === 'image').map(m => m.url), media: keepNow, manual: rmM ? '' : oldManual, manualType: oldType, accessories: accNow.map(a => ({ name: a.name.trim(), image: a.url || '' })) };
+  const early = { ...fields, images: keepNow.filter(m => m.type === 'image').map(m => m.url), media: keepNow, manual, manualType: manualType0, accessories: accNow.map(a => ({ name: a.name.trim(), image: a.url || '' })) };
   let ref = null;
   if (live) ref = ed ? db.collection('products').doc(ed.id) : db.collection('products').doc();
   let target;
@@ -806,13 +816,14 @@ $('fAdd').onsubmit = async e => {
   bgJobs++;
   /* 1) Save the product record immediately. Files continue in the background. */
   const w0 = !live ? Promise.resolve() : ed ? ref.update(early) : ref.set({ ...early, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-  const hasFiles = pendNow.length || mf || accNow.some(a => a.file);
+  const hasFiles = pendNow.length || accNow.some(a => a.file);
   try {
     await w0;
+    if (ed && oldManual && oldManual !== manual) delFile(oldManual); /* old Firebase-uploaded manual cleanup; Drive links are never touched */
     toast(hasFiles ? 'Product saved — files uploading in background…' : 'Product saved');
     if (hasFiles) {
       setBar(0, 'Preparing file upload…');
-      const totalBytes = (mf ? mf.size : 0) + pendNow.reduce((n, x) => n + (x.file?.size || 0), 0) + accNow.reduce((n, a) => n + (a.file?.size || 0), 0);
+      const totalBytes = pendNow.reduce((n, x) => n + (x.file?.size || 0), 0) + accNow.reduce((n, a) => n + (a.file?.size || 0), 0);
       let completedBytes = 0;
       const up = async (file, folder, label) => {
         const base = completedBytes;
@@ -825,13 +836,6 @@ $('fAdd').onsubmit = async e => {
         return url;
       };
 
-      // PDF first, then media/accessories. The product itself is already saved,
-      // so the user does not wait for a large PDF before the record exists.
-      let manualUrl = null;
-      if (mf) {
-        setBar(completedBytes / Math.max(totalBytes, 1), 'Uploading PDF 0%');
-        manualUrl = await up(mf, 'manuals', 'Uploading PDF');
-      }
 
       const added = [];
       for (const x of pendNow) {
@@ -850,14 +854,11 @@ $('fAdd').onsubmit = async e => {
       }
       const all = [...keepNow, ...added];
       const images = all.filter(m => m.type === 'image').map(m => m.url);
-      let manual = oldManual, manualType = manualType0;
-      if (mf) manual = manualUrl; else if (rmM) manual = '';
-      const data = { ...fields, images, media: all, manual, manualType, accessories };
+      const data = { ...fields, images, media: all, manual, manualType: manualType0, accessories };
       if (live) await ref.update(data);
       if (ed) {
         const gone = media(prev).filter(m => !keepNow.some(k => k.url === m.url)).map(m => m.url);
         (prev.accessories || []).forEach(o => { if (o.image && !accessories.some(a => a.image === o.image)) gone.push(o.image); });
-        if (oldManual && oldManual !== manual) gone.push(oldManual);
         Promise.all(gone.map(delFile));
       }
       Object.assign(target, data);
@@ -1006,8 +1007,17 @@ showView();
 const qp = new URLSearchParams(location.search).get('p') || (location.hash.match(/^#p=(.+)$/) || [])[1];
 if (qp) {
   document.body.classList.add('single');
-  document.querySelectorAll('.links a, .brand').forEach(a => { a.href = location.pathname + (a.getAttribute('href').startsWith('#') ? a.getAttribute('href') : ''); });
-  load().then(() => openProduct(decodeURIComponent(qp), location.search.includes('m=1'), 'page'));
+  const brand = document.querySelector('.brand'); if (brand) brand.removeAttribute('href');
+  (async () => {
+    const id = decodeURIComponent(qp);
+    if (live) {
+      try {
+        const d = await db.collection('products').doc(id).get();
+        products = d.exists ? [{id: d.id, ...d.data()}] : [];
+      } catch (e) { toast('Could not load product: ' + e.message); }
+    }
+    openProduct(id, location.search.includes('m=1'), 'page');
+  })();
 } else load();
 </script>
 </body>
