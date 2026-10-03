@@ -241,7 +241,7 @@ nav::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:3px;ba
 #aboutMini{display:none}
 #mlist{margin-top:20px}
 h2{margin-bottom:20px}
-body[data-view=home] #products,body[data-view=home] #manuals,body[data-view=home] #contact,body[data-view=home] #aboutMini{display:block;animation:viewIn .6s ease both}
+body[data-view=home] #catsSec,body[data-view=home] #manuals,body[data-view=home] #contact,body[data-view=home] #aboutMini{display:block;animation:viewIn .6s ease both}
 body[data-view=home] #manuals{animation-delay:.1s}body[data-view=home] #contact{animation-delay:.2s}body[data-view=home] #aboutMini{animation-delay:.3s}
 body.single #aboutMini{display:none!important}
 @media(max-width:760px){.ring{width:340px;height:340px;right:-60px}.o1{width:220px;height:220px}}
@@ -269,6 +269,53 @@ body:not([data-view=home]) .hero .wrap,body.single .hero .wrap{padding-top:44px;
 /* Shared product link: show ONLY that product (no menu, hero, other products, contact/about, admin) */
 body.single nav .links,body.single #burger,body.single #home,body.single .hero,body.single #backAll,body.single #adm,body.single #mode,body.single #products,body.single #manuals,body.single #about,body.single #contact,body.single #aboutMini{display:none!important}
 body.single .brand{pointer-events:none;cursor:default}
+/* ===== Product categories (home) + category page ===== */
+#catsSec,#catPage{display:none}
+body[data-view=category] #catPage{display:block;animation:viewIn .55s ease both}
+body[data-view=category] #home{display:none!important}
+body.single #catsSec,body.single #catPage{display:none!important}
+.cgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:24px}
+.ccard{display:flex;flex-direction:column;background:var(--bg);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;text-decoration:none;color:inherit;position:relative;animation:riseIn .65s ease both;transition:transform .3s,box-shadow .3s,border-color .3s}
+.ccard:hover{transform:translateY(-8px);border-color:var(--blue);box-shadow:0 20px 40px rgba(3,54,138,.22)}
+.cph{aspect-ratio:16/10;position:relative;overflow:hidden;display:grid;place-items:center;background:linear-gradient(135deg,#EEF2F9,#C9DAF5)}
+.cph img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;padding:14px;transition:transform .6s}
+.ccard:hover .cph img{transform:scale(1.1) rotate(-1deg)}
+.cph span{font-size:54px;font-weight:800;color:var(--blue);opacity:.45}
+.cph::after{content:"";position:absolute;top:0;left:-70%;width:40%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.6),transparent);transform:skewX(-20deg);animation:picSweep 5s ease-in-out infinite;pointer-events:none}
+.cedit{position:absolute;top:10px;right:10px;z-index:3;background:var(--ink);color:#fff;font:700 12px Manrope,sans-serif;padding:6px 12px;border-radius:99px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.3)}
+.cedit:hover{background:var(--blue)}
+.cb{padding:16px 18px 18px;display:flex;flex-direction:column;gap:4px;flex:1}
+.cb h3{font-size:19px;line-height:1.3}
+.cb small{color:var(--mut)}
+.cb p{color:var(--mut);font-size:14px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-top:4px}
+.rm{margin-top:auto;padding-top:12px;font-weight:700;color:var(--blue);display:inline-flex;gap:6px;align-items:center}
+.rm i{font-style:normal;transition:transform .25s}
+.ccard:hover .rm i{transform:translateX(7px)}
+#catPage{padding:0 0 64px}
+.cbanner{position:relative;overflow:hidden;color:#fff;background:linear-gradient(120deg,#0A1E45,#03368A,#0A1E45,#0B2A6B);background-size:300% 300%;animation:gradShift 14s ease infinite}
+.cbg{position:absolute;inset:0}
+.cbg img,.cbg video{width:100%;height:100%;object-fit:cover;opacity:.5}
+.cbg::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(10,30,69,.88),rgba(10,30,69,.3))}
+.cd{position:absolute;border-radius:50%;border:2px solid rgba(255,255,255,.14);animation:cFloat 7s ease-in-out infinite;pointer-events:none}
+.cd1{width:380px;height:380px;right:-80px;top:-120px}
+.cd2{width:220px;height:220px;right:170px;bottom:-110px;animation-delay:-3s}
+@keyframes cFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-18px)}}
+.cin{position:relative;z-index:2;max-width:1160px;margin:0 auto;padding:56px 20px 64px}
+.cback{color:#B9C7EA;text-decoration:none;font-weight:600;font-size:14px;display:inline-block;margin-bottom:18px}
+.cback:hover{color:#fff}
+.cin h1{font-size:clamp(32px,5.5vw,56px);line-height:1.08;letter-spacing:-.03em;font-weight:800;animation:riseIn .7s ease both}
+.cin p{margin:14px 0 20px;max-width:56ch;color:#D3DDF5;font-size:18px;animation:riseIn .7s .15s ease both}
+.cin .cnt{display:inline-block;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);border-radius:99px;padding:5px 14px;font-weight:700;font-size:13px;margin-right:10px;animation:riseIn .7s .3s ease both}
+.ctitle{margin:40px 0 20px}
+.cph svg.art{position:absolute;inset:0;width:100%;height:100%;padding:12px;animation:artFloat 5s ease-in-out infinite}
+.ccard:hover .cph svg.art{animation-duration:2.5s}
+@keyframes artFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+.cbart{position:absolute;right:max(24px,6vw);top:50%;width:min(340px,32vw);transform:translateY(-50%);z-index:1;pointer-events:none;background:linear-gradient(135deg,#fff,#D6E4FA);border-radius:26px;padding:8px;box-shadow:0 22px 44px rgba(0,0,0,.35)}
+@media(min-width:761px){.cin h1,.cin p{max-width:calc(100% - min(340px,32vw) - 80px)}}
+.cbart svg{display:block;width:100%;height:auto;animation:artFloat 6s ease-in-out infinite}
+@media(max-width:760px){.cbart{display:none}}
+
+@media(max-width:760px){.cin{padding:36px 20px 44px}.cin p{font-size:16px}}
 </style>
 </head>
 <body>
@@ -310,6 +357,22 @@ body.single .brand{pointer-events:none;cursor:default}
  <h1 id="pT"></h1>
  <div id="pBody"><p class="sub">Loading…</p></div>
 </div></section>
+
+<section id="catsSec">
+ <div class="wrap">
+  <h2>Product Categories</h2>
+  <p class="sub">Choose a category to see its banner and all the devices in it.</p>
+  <div class="cgrid" id="catGrid"></div>
+ </div>
+</section>
+
+<section id="catPage">
+ <div class="cbanner" id="catBanner"></div>
+ <div class="wrap">
+  <h2 class="ctitle">Available devices</h2>
+  <div class="grid" id="catGrid2"></div>
+ </div>
+</section>
 
 <section id="products">
  <div class="wrap">
@@ -403,7 +466,7 @@ body.single .brand{pointer-events:none;cursor:default}
   <label>Category</label><input id="aC" list="cats" placeholder="Type your own category">
   <datalist id="cats"></datalist>
   <label>Description</label><textarea id="aD" rows="3"></textarea>
-   <label>Features (one per line)</label><textarea id="aFe" rows="4"></textarea>
+   <label>Key Features (one per line)</label><textarea id="aFe" rows="4"></textarea>
    <label>Specifications (one per line, like "Frequency: 400-470 MHz")</label><textarea id="aSp" rows="5"></textarea>
    <label>Accessories (photo and name)</label><div id="acBox"></div>
    <div class="acts" style="margin-top:8px"><button type="button" class="btn ghost" id="acAdd">+ Add accessory</button></div>
@@ -427,6 +490,15 @@ body.single .brand{pointer-events:none;cursor:default}
   <div class="acts"><button type="button" class="btn" id="cOk">Crop and add</button><button type="button" class="btn ghost" id="cFull">Cancel</button></div>
   <p class="note">Drag the box or its edges to crop as you like.</p>
  </div></dialog>
+
+<dialog id="dCat" class="sm"><div class="dh"><h3>Category photos &amp; banner – <span id="cN"></span></h3><button class="x" data-close aria-label="Close">✕</button></div>
+ <form class="db" id="fCat">
+  <label>Banner text (also shown on the category card)</label><textarea id="cT" rows="3" placeholder="Short description shown on the banner and on the category card"></textarea>
+  <label>Banner photo (top of the category page – photo / video / any file)</label><input id="cBn" type="file"><p class="note" id="cBnCur" style="margin:4px 0 0"></p>
+  <label>Category card photo (shown on the home page)</label><input id="cCv" type="file"><p class="note" id="cCvCur" style="margin:4px 0 0"></p>
+  <div class="acts"><button class="btn" id="cS" type="submit">Save</button><button class="btn ghost" type="button" id="cR">Reset this category</button></div>
+  <p class="note">Changes are visible to all visitors.</p>
+ </form></dialog>
 
 <dialog id="dSite"><div class="dh"><h3>Edit website</h3><button class="x" data-close aria-label="Close">✕</button></div>
  <form class="db" id="fSite"><div id="sFields"></div>
@@ -525,9 +597,11 @@ $('acBox').addEventListener('click', e => { const i = e.target.dataset.ar; if (i
 $('acAdd').onclick = () => { acc.push({ name: '' }); renderAcc(); };
 const secs = p => {
   const f = p.features || [], sp = p.specs || [], ac = p.accessories || [], td = 'padding:8px 10px;border:1px solid var(--line)', o = [];
-  if (f.length) o.push(['Features', () => `<ul style="margin:0 0 0 20px">${f.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`]);
-  if (sp.length) o.push(['Specifications', () => `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">${sp.map(x => { const i = x.indexOf(':'); return i > 0 ? `<tr><th style="text-align:left;background:var(--mist);width:40%;${td}">${esc(x.slice(0, i).trim())}</th><td style="${td}">${esc(x.slice(i + 1).trim())}</td></tr>` : `<tr><td colspan="2" style="${td}">${esc(x)}</td></tr>`; }).join('')}</table></div>`]);
-  if (ac.length) o.push(['Accessories', () => `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:14px">${ac.map(a => `<div style="text-align:center"><div style="aspect-ratio:1;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff">${a.image ? `<img src="${esc(a.image)}" alt="${esc(a.name)}" style="width:100%;height:100%;object-fit:contain;display:block">` : ''}</div><small style="display:block;margin-top:6px;font-weight:700;color:var(--txt)">${esc(a.name)}</small></div>`).join('')}</div>`]);
+  const none = (id) => `<p class="sub" style="margin:0">No entries added yet.</p>`;
+  const adm = id => admin ? `<div class="acts" style="margin:14px 0 0"><button type="button" class="btn ghost" data-addfor="${id}">✎ Add / edit entries</button></div>` : '';
+    o.push(['Key Features', () => (f.length ? `<ul style="margin:0 0 0 20px">${f.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : none()) + adm('aFe')]);
+  o.push(['Specifications', () => (sp.length ? `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">${sp.map(x => { const i = x.indexOf(':'); return i > 0 ? `<tr><th style="text-align:left;background:var(--mist);width:40%;${td}">${esc(x.slice(0, i).trim())}</th><td style="${td}">${esc(x.slice(i + 1).trim())}</td></tr>` : `<tr><td colspan="2" style="${td}">${esc(x)}</td></tr>`; }).join('')}</table></div>` : none()) + adm('aSp')]);
+  o.push(['Accessories', () => (ac.length ? `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:14px">${ac.map(a => `<div style="text-align:center"><div style="aspect-ratio:1;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff">${a.image ? `<img src="${esc(a.image)}" alt="${esc(a.name)}" style="width:100%;height:100%;object-fit:contain;display:block">` : ''}</div><small style="display:block;margin-top:6px;font-weight:700;color:var(--txt)">${esc(a.name)}</small></div>`).join('')}</div>` : none()) + adm('acAdd')]);
   if (p.manual) o.push(['Manual', () => `<div class="acts" style="margin:0 0 8px"><a class="btn" href="${esc(mDown(p.manual))}" target="_blank" rel="noopener">Download</a><a class="btn ghost" href="${esc(mOpen(p.manual))}" target="_blank" rel="noopener">Open in new tab</a></div>${frame(p.manual, mType(p))}`]);
   return o;
 };
@@ -554,6 +628,7 @@ function pickBg(k) {
 applyBg(savedBg || 'white');
 if (live && !savedBg) db.collection('settings').doc('site').get().then(d => { if (d.exists && d.data().bg) applyBg(d.data().bg); }).catch(() => {});
 
+let loaded = false, curCat = '', CATMETA = {};
 async function load() {
   if (live) {
     try {
@@ -561,8 +636,15 @@ async function load() {
       products = s.docs.map(d => ({id: d.id, ...d.data()}));
     } catch (e) { toast('Could not load products: ' + e.message); }
   }
+  loaded = true;
   render();
 }
+
+const pCard = p => `
+    <button class="card" data-id="${p.id}">
+      <div class="ph">${p.images?.[0] ? `<img loading="lazy" src="${esc(p.images[0])}" alt="${esc(p.name)}">` : `<span>${esc(p.name.slice(0, 2))}</span>`}</div>
+      <div class="b"><h3>${esc(p.name)}</h3><small>${esc(p.model || '')}</small>${p.manual ? '<span class="tag">Manual available</span>' : ''}</div>
+    </button>`;
 
 function render() {
   const cats = ['All', ...new Set(products.map(p => p.category).filter(Boolean))];
@@ -570,16 +652,13 @@ function render() {
   $('cats').innerHTML = cats.slice(1).map(c => `<option value="${esc(c)}">`).join('');
   const q = query.toLowerCase();
   const list = products.filter(p => (cat === 'All' || p.category === cat) && (!q || (p.name + ' ' + (p.model || '') + ' ' + (p.category || '')).toLowerCase().includes(q)));
-  $('grid').innerHTML = list.length ? list.map(p => `
-    <button class="card" data-id="${p.id}">
-      <div class="ph">${p.images?.[0] ? `<img loading="lazy" src="${esc(p.images[0])}" alt="${esc(p.name)}">` : `<span>${esc(p.name.slice(0, 2))}</span>`}</div>
-      <div class="b"><h3>${esc(p.name)}</h3><small>${esc(p.model || '')}</small>${p.manual ? '<span class="tag">Manual available</span>' : ''}</div>
-    </button>`).join('') : '<div class="empty">No products found.</div>';
+  $('grid').innerHTML = list.length ? list.map(pCard).join('') : '<div class="empty">No products found.</div>';
   const withM = products.filter(p => p.manual);
   $('mlist').innerHTML = withM.length ? withM.map(p => `
     <div class="row"><div class="t"><b>${esc(p.name)}</b><span>${esc(p.model || '')} ${p.category ? '· ' + esc(p.category) : ''}</span></div>
     <button class="btn ghost" data-view="${p.id}">Read online</button>
     <a class="btn" href="${esc(mDown(p.manual))}" target="_blank" rel="noopener">Download</a></div>`).join('') : '<div class="empty">No manuals uploaded yet.</div>';
+  renderCats(); renderCatPage();
   
 }
 
@@ -615,7 +694,7 @@ function openProduct(id, showManual, mode) {
   const bgsHTML = `<div class="bgs"><small>Background</small>${BGS.map(([k, n, c]) => `<button class="bgsw ${k === curBg ? 'on' : ''}" data-b="${k}" title="${n}" aria-label="${n}" style="background:${c}"></button>`).join('')}</div>`;
   box.innerHTML = `<div class="det"><div>
     <div class="main" id="vMain">${md[0] ? mHTML(md[0], p.name) : `<span style="font-size:60px;font-weight:800;opacity:.4">${esc(p.name.slice(0, 2))}</span>`}</div>
-    <div class="th">${md.map((m, i) => m.type === 'image' ? `<img src="${esc(m.url)}" data-i="${i}" class="${i ? '' : 'on'}" alt="">` : `<button type="button" class="chip ${i ? '' : 'on'}" data-i="${i}">${ICON[m.type] || ''} ${esc(m.name || 'File')}</button>`).join('')}</div>${bgsHTML}</div>
+    <div class="th">${md.map((m, i) => m.type === 'image' ? `<img src="${esc(m.url)}" data-i="${i}" class="${i ? '' : 'on'}" alt="">` : `<button type="button" class="chip ${i ? '' : 'on'}" data-i="${i}">${ICON[m.type] || ''} ${esc(m.name || 'File')}</button>`).join('')}</div></div>
     <div><p style="color:var(--mut)">${esc(p.model || '')} ${p.category ? '· ' + esc(p.category) : ''}</p>
     <p style="margin-top:10px">${esc(p.desc || '')}</p>
     <div class="acts">
@@ -626,6 +705,7 @@ function openProduct(id, showManual, mode) {
   const tabs = box.querySelectorAll('[data-tab]'), panel = box.querySelector('#pPanel');
   tabs.forEach(b => b.onclick = () => { const i = +b.dataset.tab; cur = cur === i ? -1 : i; tabs.forEach(x => x.classList.toggle('on', +x.dataset.tab === cur)); panel.innerHTML = cur < 0 ? '' : `<div style="padding:16px;border:1px solid var(--line);border-radius:12px">${S[cur][1]()}</div>`; });
   
+  panel.onclick = e => { const b = e.target.closest('[data-addfor]'); if (!b) return; if (!page) $('dView').close(); openForm(p); setTimeout(() => { const el = $(b.dataset.addfor); if (el) { el.scrollIntoView({ block: 'center' }); el.focus(); } }, 60); };
   if ($('delP')) $('delP').onclick = () => delProduct(p);
   if ($('edP')) $('edP').onclick = () => { if (!page) $('dView').close(); openForm(p); };
   $('shP').onclick = () => sharePhoto(p, link);
@@ -934,7 +1014,7 @@ const SCH = [
  ['', 'Browser & brand', '', 'g'], ['title', 'Browser tab title', 'title', 't'], ['logo', 'Logo (photo / video / any file)', '.brand > :first-child', 'm'], ['brand', 'Brand name', '.brand span', 't'],
  ['', 'Menu', '', 'g'], ['n1', 'Menu item 1', '.links a:nth-of-type(1)', 't'], ['n2', 'Menu item 2', '.links a:nth-of-type(2)', 't'], ['n3', 'Menu item 3', '.links a:nth-of-type(3)', 't'], ['n4', 'Menu item 4', '.links a:nth-of-type(4)', 't'], ['n5', 'Menu item 5', '.links a:nth-of-type(5)', 't'],
  ['', 'Home banner', '', 'g'], ['hbg', 'Banner background (photo / video)', '#hm', 'b'], ['h1', 'Banner title', '#home h1', 't'], ['h2', 'Banner text', '#home p', 'p'], ['hph', 'Search box placeholder', '#q', 'ph'], ['hbt', 'Search button', '#heroSearch button', 't'],
- ['', 'Section titles', '', 'g'], ['t1', 'Products title', '#products h2', 't'], ['t2', 'Manuals title', '#manuals h2', 't'], ['t3', 'Contact title', '#contact h2', 't'], ['t4', 'About page title', '#about h2', 't'], ['t5', 'Home page About title', '#aboutMini h2', 't'],
+ ['', 'Section titles', '', 'g'], ['t1', 'Products title', '#products h2', 't'], ['ctt', 'Product Categories title', '#catsSec h2', 't'], ['cts', 'Product Categories text', '#catsSec .sub', 'p'], ['t2', 'Manuals title', '#manuals h2', 't'], ['t3', 'Contact title', '#contact h2', 't'], ['t4', 'About page title', '#about h2', 't'], ['t5', 'Home page About title', '#aboutMini h2', 't'],
  ['', 'About page', '', 'g'], ['ab', 'About paragraphs (one per line)', '#about .atext p:not(.motto)', 'l'], ['mo', 'Quote line', '#about .motto', 't'], ['p1', 'About photo 1 (any file)', '#about .pic:nth-child(1) > :first-child', 'm'], ['p2', 'About photo 2 (any file)', '#about .pic:nth-child(2) > :first-child', 'm'],
  ['', 'Home page About box', '', 'g'], ['ab2', 'About text (one paragraph per line)', '#aboutMini .atext p:not(.motto)', 'l'], ['mo2', 'Quote line', '#aboutMini .motto', 't'], ['abt', 'Button label', '#aboutMini .btn', 't'],
  ['', 'Contact', '', 'g'], ['ct', 'Address (first line is bold; add phone / email as extra lines)', '#contact p', 'a'], ['cb', 'Map button label', '#contact .btn', 't'], ['cl', 'Map button link', '#contact .btn', 'href'],
@@ -991,13 +1071,127 @@ $('sR').onclick = async () => {
   try { if (live) await db.collection('settings').doc('site').update({ content: firebase.firestore.FieldValue.delete() }); location.reload(); } catch (err) { toast('Reset failed: ' + err.message); }
 };
 
+/* ===== Product categories ===== */
+const catKey = n => String(n).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'other';
+function catList() {
+  const m = new Map();
+  products.forEach(p => { const n = p.category || 'Other', k = catKey(n); if (!m.has(k)) m.set(k, { name: n, items: [] }); m.get(k).items.push(p); });
+  return [...m.entries()].sort((a, b) => a[0] === 'other' ? 1 : b[0] === 'other' ? -1 : a[1].name.localeCompare(b[1].name));
+}
+const firstImg = items => { for (const p of items) { const i = media(p).find(x => x.type === 'image'); if (i) return i.url; } return ''; };
+
+/* Default Sanchar-branded device art for each category (used until a photo is set) */
+function catArt(name) {
+  const n = String(name).toLowerCase(), B = '#03368A', K = '#0A1E45', A = '#F5A400', L = '#7FB2FF';
+  const brand = (x, y, sz, fill) => `<text x="${x}" y="${y}" text-anchor="middle" font-family="Manrope,Arial,sans-serif" font-weight="800" font-size="${sz}" letter-spacing="1" fill="${fill}">SANCHAR</text>`;
+  let t = 'hand';
+  if (/accessor|battery|charger|headset|earpiece|microphone|speaker|cable|cradle/.test(n)) t = 'acc';
+  else if (/antenna|tower|mast|feeder/.test(n)) t = 'ant';
+  else if (/repeater|base|station|gateway|infrastructure|server|controller|dispatch|network/.test(n)) t = 'rep';
+  else if (/vehicle|mobile|car|desk|fixed|mounted/.test(n)) t = 'veh';
+  else if (/poc|lte|mcx|4g|5g|push|smart|rugged|phone/.test(n)) t = 'poc';
+  let g = '';
+  if (t === 'hand') {
+    let keys = ''; for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) keys += `<rect x="${142 + c * 24}" y="${116 + r * 20}" width="20" height="14" rx="4" fill="#fff" opacity=".22"/>`;
+    g = `<rect x="196" y="12" width="10" height="48" rx="5" fill="${K}"/><rect x="140" y="42" width="16" height="18" rx="4" fill="${A}"/><rect x="164" y="46" width="10" height="14" rx="3" fill="${K}"/>
+      <rect x="126" y="56" width="100" height="134" rx="18" fill="${B}"/><rect x="118" y="94" width="9" height="42" rx="4" fill="${A}"/>
+      <rect x="140" y="70" width="72" height="34" rx="6" fill="${K}"/>${brand(176, 91, 11, L)}${keys}`;
+  } else if (t === 'veh') {
+    g = `<rect x="106" y="16" width="6" height="46" rx="3" fill="${K}"/><rect x="70" y="62" width="180" height="76" rx="12" fill="${B}"/><rect x="80" y="72" width="160" height="56" rx="8" fill="${K}"/>
+      <rect x="92" y="82" width="86" height="26" rx="4" fill="${L}"/>${brand(135, 100, 12, K)}
+      <circle cx="204" cy="94" r="11" fill="${A}"/><circle cx="230" cy="94" r="11" fill="#fff" opacity=".85"/>
+      <rect x="92" y="114" width="20" height="8" rx="3" fill="#fff" opacity=".3"/><rect x="118" y="114" width="20" height="8" rx="3" fill="#fff" opacity=".3"/><rect x="144" y="114" width="20" height="8" rx="3" fill="#fff" opacity=".3"/>
+      <rect x="96" y="138" width="128" height="10" rx="3" fill="${K}" opacity=".6"/>
+      <path d="M248 112 C292 112 292 156 272 166" stroke="${K}" stroke-width="4" fill="none" stroke-linecap="round"/><rect x="254" y="160" width="34" height="26" rx="9" fill="${K}"/><circle cx="271" cy="173" r="5" fill="${A}"/>`;
+  } else if (t === 'rep') {
+    let u = ''; for (let i = 0; i < 3; i++) u += `<rect x="80" y="${52 + i * 38}" width="120" height="30" rx="5" fill="${B}"/><circle cx="93" cy="${67 + i * 38}" r="4" fill="${['#22c55e', A, '#fff'][i]}"/>${brand(150, 71 + i * 38, 11, '#fff')}<path d="M180 ${60 + i * 38}h12M180 ${66 + i * 38}h12M180 ${72 + i * 38}h12" stroke="#fff" opacity=".35" stroke-width="2"/>`;
+    g = `<rect x="70" y="40" width="140" height="132" rx="10" fill="${K}"/>${u}
+      <path d="M200 67h50" stroke="${K}" stroke-width="4"/><rect x="246" y="30" width="8" height="142" rx="4" fill="${K}"/><path d="M230 52h40M236 74h28" stroke="${K}" stroke-width="4" stroke-linecap="round"/>
+      <path d="M232 22a26 26 0 0 1 36 0M224 12a38 38 0 0 1 52 0" stroke="${A}" stroke-width="4" fill="none" stroke-linecap="round"/>`;
+  } else if (t === 'ant') {
+    g = `<polygon points="160,26 112,176 208,176" fill="none" stroke="${B}" stroke-width="5" stroke-linejoin="round"/>
+      <path d="M146 70h28M134 112h52M122 150h76M146 70l30 42M174 70l-30 42M134 112l44 38M186 112l-44 38" stroke="${B}" stroke-width="3" fill="none"/>
+      <rect x="96" y="176" width="128" height="14" rx="5" fill="${K}"/>${brand(160, 187, 9, '#fff')}<circle cx="160" cy="22" r="7" fill="${A}"/>
+      <path d="M174 14a18 18 0 0 1 0 24M186 6a30 30 0 0 1 0 40M146 14a18 18 0 0 0 0 24M134 6a30 30 0 0 0 0 40" stroke="${A}" stroke-width="4" fill="none" stroke-linecap="round"/>`;
+  } else if (t === 'acc') {
+    g = `<rect x="52" y="84" width="104" height="76" rx="12" fill="${B}"/><rect x="156" y="108" width="12" height="28" rx="4" fill="${K}"/><polygon points="108,92 90,128 106,128 98,152 124,114 108,114" fill="${A}"/>${brand(104, 174, 11, K)}
+      <path d="M196 124a42 42 0 0 1 84 0" stroke="${K}" stroke-width="8" fill="none" stroke-linecap="round"/><rect x="186" y="116" width="22" height="44" rx="9" fill="${B}"/><rect x="268" y="116" width="22" height="44" rx="9" fill="${B}"/>
+      <path d="M279 160q-6 24-46 28" stroke="${K}" stroke-width="4" fill="none" stroke-linecap="round"/><circle cx="230" cy="188" r="7" fill="${A}"/>`;
+  } else {
+    g = `<rect x="104" y="14" width="112" height="172" rx="22" fill="${K}"/><rect x="96" y="58" width="7" height="48" rx="3" fill="${A}"/><rect x="116" y="30" width="88" height="76" rx="9" fill="${B}"/>
+      ${brand(160, 62, 12, '#fff')}<text x="188" y="48" text-anchor="middle" font-family="Manrope,Arial,sans-serif" font-weight="800" font-size="10" fill="${A}">LTE</text>
+      <rect x="128" y="80" width="8" height="10" rx="2" fill="${A}"/><rect x="141" y="74" width="8" height="16" rx="2" fill="${A}"/><rect x="154" y="68" width="8" height="22" rx="2" fill="${A}"/>
+      <circle cx="160" cy="144" r="25" fill="${A}"/><text x="160" y="149" text-anchor="middle" font-family="Manrope,Arial,sans-serif" font-weight="800" font-size="14" fill="${K}">PTT</text>
+      <path d="M136 178h48" stroke="#fff" opacity=".35" stroke-width="3" stroke-dasharray="2 6" stroke-linecap="round"/>`;
+  }
+  return `<svg class="art" viewBox="0 0 320 200" role="img" aria-label="${esc(name)} – Sanchar Telesystems" xmlns="http://www.w3.org/2000/svg"><g transform="translate(160 100) scale(.84) translate(-160 -100)">${g}</g></svg>`;
+}
+function renderCats() {
+  const L = catList();
+  $('catGrid').innerHTML = L.length ? L.map(([k, c], i) => {
+    const m = CATMETA[k] || {}, img = (m.cover && m.cover.type === 'image' && m.cover.url) || firstImg(c.items), n = c.items.length;
+    return `<a class="ccard" href="#c=${k}" style="animation-delay:${Math.min(i, 10) * .08}s">
+      ${admin ? `<span class="cedit" data-ce="${k}" role="button">✎ Edit photos</span>` : ''}<div class="cph">${img ? `<img loading="lazy" src="${esc(img)}" alt="${esc(c.name)}">` : catArt(c.name)}</div>
+      <div class="cb"><h3>${esc(c.name)}</h3><small>${n} ${n === 1 ? 'product' : 'products'}</small>${m.text ? `<p>${esc(m.text)}</p>` : ''}<span class="rm">Read more <i>→</i></span></div></a>`;
+  }).join('') : `<div class="empty">${loaded ? 'No product categories yet.' : 'Loading…'}</div>`;
+}
+function renderCatPage() {
+  if (document.body.dataset.view !== 'category') return;
+  const hit = catList().find(([k]) => k === curCat), c = hit && hit[1], m = CATMETA[curCat] || {}, b = m.banner;
+  const bg = b && b.url ? (b.type === 'video' ? `<video src="${esc(b.url)}" autoplay muted loop playsinline></video>` : b.type === 'image' ? `<img src="${esc(b.url)}" alt="">` : '') : '';
+  const name = c ? c.name : 'Category', n = c ? c.items.length : 0;
+  $('catBanner').innerHTML = `<div class="cbg">${bg}</div>${bg ? '' : `<div class="cbart">${catArt(name)}</div>`}<i class="cd cd1"></i><i class="cd cd2"></i>
+    <div class="cin"><a class="cback" href="#home">← All categories</a>
+    <h1>${esc(name)}</h1>
+    <p>${esc(c ? (m.text || 'Explore all ' + name + ' devices from Sanchar Telesystems.') : (loaded ? 'This category was not found.' : 'Loading…'))}</p>
+    ${c ? `<span class="cnt">${n} ${n === 1 ? 'device' : 'devices'}</span>` : ''}${admin && c ? '<button class="btn" id="edCat" type="button">Edit banner</button>' : ''}</div>`;
+  $('catGrid2').innerHTML = c ? c.items.map(pCard).join('') : '';
+}
+function openCatEdit(k) {
+  curCat = k; const m = CATMETA[k] || {}, hit = catList().find(([x]) => x === k);
+  $('cN').textContent = hit ? hit[1].name : '';
+  $('cT').value = m.text || ''; $('cBn').value = ''; $('cCv').value = '';
+  $('cBnCur').textContent = m.banner && m.banner.name ? 'Current: ' + m.banner.name : 'No banner photo set yet';
+  $('cCvCur').textContent = m.cover && m.cover.name ? 'Current: ' + m.cover.name : 'No card photo set yet';
+  $('dCat').showModal();
+}
+$('catBanner').addEventListener('click', e => { if (e.target.id === 'edCat') openCatEdit(curCat); });
+$('catGrid').addEventListener('click', e => { const b = e.target.closest('[data-ce]'); if (!b) return; e.preventDefault(); e.stopPropagation(); openCatEdit(b.dataset.ce); });
+$('fCat').onsubmit = async e => {
+  e.preventDefault(); const b = $('cS'); b.disabled = true; b.textContent = 'Saving…';
+  try {
+    const m = { ...(CATMETA[curCat] || {}) };
+    m.text = $('cT').value.trim();
+    for (const [id, key] of [['cBn', 'banner'], ['cCv', 'cover']]) {
+      const f = $(id).files[0];
+      if (f) m[key] = { url: await upload(f, 'site', q => b.textContent = 'Uploading ' + Math.round(q * 100) + '%'), type: ftype(f), name: f.name };
+    }
+    CATMETA[curCat] = m;
+    if (live) await db.collection('settings').doc('site').set({ catsMeta: { [curCat]: m } }, { merge: true });
+    $('dCat').close(); renderCats(); renderCatPage(); toast('Category updated');
+  } catch (err) { toast('Save failed: ' + err.message); }
+  b.disabled = false; b.textContent = 'Save';
+};
+$('cR').onclick = async () => {
+  if (!confirm('Reset this category banner to default?')) return;
+  try {
+    delete CATMETA[curCat];
+    if (live) await db.collection('settings').doc('site').set({ catsMeta: { [curCat]: firebase.firestore.FieldValue.delete() } }, { merge: true });
+    $('dCat').close(); renderCats(); renderCatPage(); toast('Category reset');
+  } catch (err) { toast('Reset failed: ' + err.message); }
+};
+if (live) db.collection('settings').doc('site').get().then(d => { if (d.exists && d.data().catsMeta) { CATMETA = d.data().catsMeta; renderCats(); renderCatPage(); } }).catch(() => {});
+
 // tab-style navigation: only the clicked option's content is shown
 const VIEWS = ['home', 'products', 'manuals', 'about', 'contact'];
 function showView() {
   const h = location.hash.replace('#', '');
-  const v = VIEWS.includes(h) ? h : 'home';
+  let v = VIEWS.includes(h) ? h : 'home';
+  if (h.startsWith('c=')) { v = 'category'; curCat = h.slice(2); }
   document.body.dataset.view = v;
-  document.querySelectorAll('.links a').forEach(a => a.classList.toggle('on', a.getAttribute('href') === '#' + v));
+  const nav = v === 'category' ? 'home' : v;
+  document.querySelectorAll('.links a').forEach(a => a.classList.toggle('on', a.getAttribute('href') === '#' + nav));
+  if (v === 'category') renderCatPage();
   window.scrollTo(0, 0);
 }
 syncMini();
