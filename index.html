@@ -439,15 +439,17 @@ body:not([data-view=home]) .hero .wrap,body.single .hero .wrap{padding-top:44px;
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics-compat.js"></script>
 <script>
 /* ====== PASTE YOUR FIREBASE CONFIG HERE ====== */
 const CFG = {
-  apiKey: "AIzaSyAZqnCuT6XTvyuVdr2Fq6Sfr0_cIGkyqik",
-  authDomain: "stlhub1-9b2cc.firebaseapp.com",
-  projectId: "stlhub1-9b2cc",
-  storageBucket: "stlhub1-9b2cc.firebasestorage.app",
-  messagingSenderId: "889625547315",
-  appId: "1:889625547315:web:6f510124e45f558dd60946"
+  apiKey: "AIzaSyBo9sU7XV44wX59CHNVjDVfqFIKh-szxns",
+  authDomain: "stlhub-ebac2.firebaseapp.com",
+  projectId: "stlhub-ebac2",
+  storageBucket: "stlhub-ebac2.firebasestorage.app",
+  messagingSenderId: "99479003975",
+  appId: "1:99479003975:web:d73c6bd683d8a73e416262",
+  measurementId: "G-3LJDX2BLCQ"
 };
 /* ===================================================== */
 
@@ -465,6 +467,7 @@ if (live) {
   db = firebase.firestore(); st = firebase.storage(); au = firebase.auth();
   try { st.setMaxUploadRetryTime(30000); st.setMaxOperationRetryTime(30000); } catch (e) {}
   au.onAuthStateChanged(u => setAdmin(!!u));
+  try { firebase.analytics(); } catch (e) { console.warn('Analytics unavailable:', e && e.message); }
 } else {
   $('mode').hidden = false;
   products = [
