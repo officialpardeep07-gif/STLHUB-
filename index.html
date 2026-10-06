@@ -535,6 +535,48 @@ dialog#dCrop{width:min(580px,96vw);margin:auto}
 .cr-prev{position:relative;overflow:hidden;border-radius:10px;background:var(--mist);border:1px solid var(--line);width:100%}
 @media(max-width:520px){.cr-pv{width:120px}}
 </style>
+<style id="skyTheme">
+/* ===== Light sky-blue animated background (replaces dark technology background) ===== */
+:root{--t0:#d6ecfc;--t1:#eaf6ff;--cy:#0A8FE0;--bl:#0A66E0;--tline:rgba(3,54,138,.14);--tsoft:#4A5E86;--tlight:#14213D}
+html{background:#cfe8fb}
+@keyframes beam{from{transform:translateX(-14vw)}to{transform:translateX(14vw)}}
+body::before{z-index:-3;background:radial-gradient(900px 420px at 50% 112%,rgba(90,175,240,.40),transparent 70%),linear-gradient(180deg,#eef9ff 0%,#cdeafc 55%,#b6ddf7 100%);animation:none}
+body::after{content:"";position:fixed;inset:-20vh -20vw;z-index:-2;pointer-events:none;
+ background:
+  linear-gradient(105deg,transparent 30%,rgba(255,255,255,.55) 42%,transparent 54%),
+  linear-gradient(105deg,transparent 60%,rgba(255,255,255,.34) 68%,transparent 76%);
+ animation:beam 16s ease-in-out infinite alternate}
+#techbg{z-index:-1}
+@media (prefers-reduced-motion:reduce){body::after{animation:none}}
+
+/* sections: frosted light glass */
+section.alt,#about{background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(235,246,255,.40));-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border-top:1px solid var(--tline);border-bottom:1px solid var(--tline)}
+section h2,#pPage h1{color:#0A1E45}
+.back,.atext .motto{color:#03368A}
+.stat b{color:#0A66E0}
+.row:hover{background:rgba(10,102,224,.08)}
+.chip.on{border-color:var(--bl)}
+.card,.ccard{border-color:rgba(3,54,138,.16);box-shadow:0 8px 24px rgba(3,54,138,.12)}
+.card:hover,.ccard:hover{border-color:var(--bl);box-shadow:0 0 0 1px var(--bl),0 16px 38px rgba(10,102,224,.22)}
+#pBody{box-shadow:0 12px 34px rgba(3,54,138,.15)}
+
+/* product detail page */
+.ap{--a-ink:#0A1E45;--a-mut:#52638A;--a-line:rgba(3,54,138,.18);--a-soft:rgba(255,255,255,.7);--a-blue:#0A66E0}
+.ap-eye{color:#C77F00}
+html .ap .main{box-shadow:0 12px 30px rgba(3,54,138,.18)}
+.ap .th .chip{background:rgba(255,255,255,.75)}
+.ap-seg{background:rgba(232,246,255,.78)}
+.ap-segin{background:rgba(3,54,138,.08)}
+.ap-tab:hover{background:rgba(3,54,138,.07)}
+.ap-tab.on{background:#fff;box-shadow:0 1px 8px rgba(3,54,138,.18)}
+.sess{display:flex;gap:12px;align-items:center;padding:12px 14px;border:1px solid var(--line);border-radius:12px;margin-bottom:10px;background:#fff;color:var(--txt)}
+.sess .ic{font-size:28px;flex:none}.sess .t{flex:1;min-width:0}.sess .t b{display:block;overflow-wrap:anywhere}
+.sess small{display:block;color:var(--mut);line-height:1.5;font-size:12.5px}
+.sess .me{font-size:11px;font-weight:700;background:#dcfce7;color:#166534;border-radius:6px;padding:1px 7px;margin-left:6px;vertical-align:middle}
+.sess .st{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;background:#9aa6c0}.sess .st.on{background:#22c55e}
+.sess .btn{flex:none;padding:8px 14px;font-size:13px}
+#sessAll{margin-top:4px}
+</style>
 </head>
 <body>
 <canvas id="techbg" aria-hidden="true"></canvas>
@@ -678,6 +720,7 @@ dialog#dCrop{width:min(580px,96vw);margin:auto}
  <div id="admMenu" hidden>
   <button class="btn ghost" id="adminBtn">Add product</button>
   <button class="btn ghost" id="siteBtn" hidden>Edit website</button>
+  <button class="btn ghost" id="sessBtn" hidden>Logged-in devices</button>
   <button class="btn ghost" id="outBtn" hidden>Logout</button>
  </div>
  <button class="btn ghost" id="admT" aria-label="Admin" title="Admin">🔒</button>
@@ -695,6 +738,10 @@ dialog#dCrop{width:min(580px,96vw);margin:auto}
   <div class="acts"><button class="btn" type="submit">Login</button></div>
   <p class="note">Only the admin can edit the website and upload files.</p>
  </form></dialog>
+
+<!-- admin sessions -->
+<dialog id="dSess" style="width:min(560px,94vw)"><div class="dh"><h3>Logged-in devices</h3><button class="x" data-close aria-label="Close">✕</button></div>
+ <div class="db"><p class="note" style="margin:0 0 12px">Jis PC / phone me admin login hai wo yahan dikhega. "Logout" dabane par wo device turant logout ho jayega.</p><div id="sessB"></div></div></dialog>
 
 <!-- add product -->
 <dialog id="dAdd"><div class="dh"><h3 id="aT">Add product</h3><button class="x" data-close aria-label="Close">✕</button></div>
@@ -781,7 +828,7 @@ if (live) {
   firebase.initializeApp(CFG);
   db = firebase.firestore(); st = firebase.storage(); au = firebase.auth();
   try { st.setMaxUploadRetryTime(30000); st.setMaxOperationRetryTime(30000); } catch (e) {}
-  au.onAuthStateChanged(u => setAdmin(!!u));
+  au.onAuthStateChanged(async u => { if (!u) { sessDetach(); setAdmin(false); return; } setAdmin(await sessStart()); });
   try { firebase.analytics(); } catch (e) { console.warn('Analytics unavailable:', e && e.message); }
 } else {
   $('mode').hidden = false;
@@ -1172,18 +1219,110 @@ const idleTouch = () => { idleLast = Date.now(); };
 async function idleCheck() {
   if (!admin || Date.now() - idleLast < IDLE_MS) return;
   clearInterval(idleT); idleT = null;
-  try { if (live) await au.signOut(); } catch (e) {}
-  setAdmin(false);
+  await doLogout();
   toast('Auto logged out – 10 minutes inactive', 7000);
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) idleCheck(); });
 function idleArm(v) { clearInterval(idleT); idleT = null; if (v) { idleLast = Date.now(); idleT = setInterval(idleCheck, 15000); } }
 
+/* ===== Admin sessions: see which PC/phone is logged in + remote logout ===== */
+const SESS = () => db.collection('adminSessions');
+const TS = () => firebase.firestore.FieldValue.serverTimestamp();
+let mySid = null, myUnsub = null, hbT = null, listUnsub = null, listT = null, lastSnap = null, sessWarned = false;
+function devInfo() {
+  const ua = navigator.userAgent; let os = 'Unknown OS', type = 'PC', br = 'Browser';
+  if (/iPhone/.test(ua)) { os = 'iPhone (iOS)'; type = 'Phone'; }
+  else if (/iPad/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) { os = 'iPad (iOS)'; type = 'Tablet'; }
+  else if (/Android/.test(ua)) { const m = ua.match(/Android[^;]*;\s*([^;)]+?)(?:\sBuild|[;)])/); const mod = m && m[1].trim(); os = 'Android' + (mod && mod !== 'K' ? ' ' + mod : ''); type = /Mobile/.test(ua) ? 'Phone' : 'Tablet'; }
+  else if (/Windows/.test(ua)) os = 'Windows';
+  else if (/Mac OS X/.test(ua)) os = 'Mac';
+  else if (/CrOS/.test(ua)) os = 'ChromeOS';
+  else if (/Linux/.test(ua)) os = 'Linux';
+  if (/Edg\//.test(ua)) br = 'Edge'; else if (/OPR\/|Opera/.test(ua)) br = 'Opera'; else if (/SamsungBrowser/.test(ua)) br = 'Samsung Internet';
+  else if (/Firefox|FxiOS/.test(ua)) br = 'Firefox'; else if (/Chrome|CriOS/.test(ua)) br = 'Chrome'; else if (/Safari/.test(ua)) br = 'Safari';
+  return { type, os, br, screen: screen.width + '×' + screen.height, tz: (Intl.DateTimeFormat().resolvedOptions().timeZone || ''), name: type + ' – ' + os + ' – ' + br };
+}
+const newSid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2, 10));
+function sessWarn(e) { console.warn('Sessions:', e); if (!sessWarned) { sessWarned = true; toast('Device list kaam nahi karegi – Firestore Rules me adminSessions allow karein', 9000); } }
+function sessDetach() { if (myUnsub) { myUnsub(); myUnsub = null; } clearInterval(hbT); hbT = null; }
+async function forceOut(msg) {
+  const sid = mySid || localStorage.getItem('adm_sid');
+  sessDetach();
+  try { if (live && sid) await SESS().doc(sid).delete(); } catch (e) {}
+  localStorage.removeItem('adm_sid'); mySid = null;
+  try { if (live) await au.signOut(); } catch (e) {}
+  setAdmin(false);
+  if (msg) toast(msg, 7000);
+}
+const doLogout = () => forceOut('');
+async function sessStart() {
+  if (!live) return true;
+  sessDetach();
+  let sid = localStorage.getItem('adm_sid');
+  try {
+    if (sid) {
+      const d = await SESS().doc(sid).get();
+      if (!d.exists) { await forceOut('Session expire ho gaya – dobara login karein'); return false; }
+      const x = d.data(), la = x.lastActive && x.lastActive.toMillis ? x.lastActive.toMillis() : 0;
+      if (x.revoked || (la && Date.now() - la > IDLE_MS)) { await forceOut(x.revoked ? 'Is device ko dusre device se logout kar diya gaya' : 'Auto logged out – 10 minutes inactive'); return false; }
+      await SESS().doc(sid).update({ lastActive: TS() });
+    } else {
+      sid = newSid();
+      const di = devInfo();
+      await SESS().doc(sid).set({ device: di.name, type: di.type, os: di.os, browser: di.br, screen: di.screen, tz: di.tz, revoked: false, loginAt: TS(), lastActive: TS() });
+      localStorage.setItem('adm_sid', sid);
+    }
+  } catch (e) { sessWarn(e); return true; }
+  mySid = sid;
+  myUnsub = SESS().doc(sid).onSnapshot(s => { if (s.metadata.hasPendingWrites) return; if (!s.exists || (s.data() || {}).revoked) forceOut('Is device ko logout kar diya gaya'); }, () => {});
+  hbT = setInterval(() => { if (admin && mySid && Date.now() - idleLast < 70000) SESS().doc(mySid).update({ lastActive: TS() }).catch(() => {}); }, 60000);
+  return true;
+}
+function ago(ms) { const m = Math.max(0, Math.round((Date.now() - ms) / 60000)); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : Math.round(m / 60) + ' h ago'; }
+function renderSess(snap) {
+  lastSnap = snap; const now = Date.now(), rows = [];
+  snap.forEach(d => {
+    const x = d.data(), la = x.lastActive && x.lastActive.toMillis ? x.lastActive.toMillis() : now, lt = x.loginAt && x.loginAt.toMillis ? x.loginAt.toMillis() : la;
+    if (now - la > IDLE_MS + 120000 && d.id !== mySid) { d.ref.delete().catch(() => {}); return; }
+    rows.push({ id: d.id, x, la, lt });
+  });
+  rows.sort((a, b) => (b.id === mySid) - (a.id === mySid) || b.la - a.la);
+  const others = rows.filter(r => r.id !== mySid && !r.x.revoked).length;
+  $('sessB').innerHTML = (rows.length ? rows.map(r => {
+    const me = r.id === mySid, on = now - r.la < 120000, x = r.x;
+    return `<div class="sess"><div class="ic">${x.type === 'PC' ? '💻' : x.type === 'Tablet' ? '📱' : '📱'}</div>
+      <div class="t"><b>${esc(x.device || 'Unknown device')}${me ? '<span class="me">This device</span>' : ''}</b>
+      <small><span class="st ${on ? 'on' : ''}"></span>${on ? 'Active now' : 'Idle · last active ' + ago(r.la)}</small>
+      <small>Login: ${esc(new Date(r.lt).toLocaleString())} · Screen ${esc(x.screen || '')}${x.tz ? ' · ' + esc(x.tz) : ''} · ID ${esc(r.id.slice(0, 4))}</small></div>
+      ${me ? '' : x.revoked ? '<small>Logging out…</small>' : `<button class="btn warn" type="button" data-kick="${esc(r.id)}">Logout</button>`}</div>`;
+  }).join('') : '<p class="sub">Koi session nahi mila.</p>') + (others > 0 ? '<button class="btn ghost" type="button" id="sessAll">Logout all other devices</button>' : '');
+}
+function sessOpen() {
+  $('dSess').showModal();
+  if (!live) { $('sessB').innerHTML = '<p class="sub">Ye feature sirf Firebase live mode me chalta hai.</p>'; return; }
+  $('sessB').innerHTML = '<p class="sub">Loading…</p>';
+  if (listUnsub) listUnsub(); clearInterval(listT);
+  listUnsub = SESS().onSnapshot(renderSess, e => { $('sessB').innerHTML = '<p class="sub">Load nahi hua: ' + esc(e.message) + '<br>Firestore Rules me adminSessions allow karein.</p>'; });
+  listT = setInterval(() => { if (lastSnap) renderSess(lastSnap); }, 30000);
+}
+$('dSess').addEventListener('close', () => { if (listUnsub) { listUnsub(); listUnsub = null; } clearInterval(listT); lastSnap = null; });
+$('sessBtn').onclick = sessOpen;
+$('sessB').onclick = async e => {
+  const k = e.target.closest('[data-kick]');
+  try {
+    if (k) { await SESS().doc(k.dataset.kick).update({ revoked: true }); toast('Logout request bhej di'); }
+    else if (e.target.closest('#sessAll') && lastSnap) {
+      const b = db.batch(); lastSnap.forEach(d => { if (d.id !== mySid) b.update(d.ref, { revoked: true }); });
+      await b.commit(); toast('Baaki sab devices logout ho rahe hain');
+    }
+  } catch (err) { toast('Failed: ' + err.message, 6000); }
+};
+
 function setAdmin(v) {
   admin = v;
   idleArm(v);
   $('adminBtn').textContent = v ? 'Add product' : 'Admin login';
-  $('outBtn').hidden = !v; $('siteBtn').hidden = !v; $('admT').textContent = v ? '🔓' : '🔒'; $('admMenu').hidden = true;
+  $('outBtn').hidden = !v; $('sessBtn').hidden = !(v && live); $('siteBtn').hidden = !v; $('admT').textContent = v ? '🔓' : '🔒'; $('admMenu').hidden = true;
   render();
 }
 $('admT').onclick = () => { if (!admin) $('dLogin').showModal(); else $('admMenu').hidden = !$('admMenu').hidden; };
@@ -1193,7 +1332,7 @@ $('adminBtn').onclick = () => {
   if (admin) openForm(null); else $('dLogin').showModal();
   $('links').classList.remove('open');
 };
-$('outBtn').onclick = async () => { if (live) await au.signOut(); else setAdmin(false); toast('Logged out'); };
+$('outBtn').onclick = async () => { await doLogout(); toast('Logged out'); };
 const sha = async t => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)))].map(x => x.toString(16).padStart(2, '0')).join('');
 $('lPT').onclick = () => {
   const show = $('lP').type === 'password';
@@ -1443,87 +1582,40 @@ if (qp) {
 </script>
 
 <script>
-/* Technology background: drifting nodes, links, travelling signal pulses and radio ripples */
+/* Sky background: soft bubbles slowly rising */
 (function(){
   var c = document.getElementById('techbg');
   if (!c || !c.getContext) return;
   var ctx = c.getContext('2d');
   var dpr = Math.min(window.devicePixelRatio || 1, 1.5);
   var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var LINK = 150, W = 0, H = 0, nodes = [], pulses = [], ripples = [], last = 0, nextPulse = 0, timer = 0;
-
-  function mk() {
-    var hub = Math.random() < 0.14;
-    return {
-      x: Math.random() * W, y: Math.random() * H,
-      vx: (Math.random() - 0.5) * 0.18, vy: (Math.random() - 0.5) * 0.18,
-      r: hub ? 2.6 : 1.4 + Math.random() * 0.8, hub: hub, amber: hub && Math.random() < 0.25
-    };
+  var W = 0, H = 0, bubbles = [], last = 0, timer = 0;
+  function mk(initial) {
+    var r = 5 + Math.random() * 24;
+    return { x: Math.random() * W, y: initial ? Math.random() * H : H + r + Math.random() * 60, r: r,
+      vy: 0.012 + Math.random() * 0.03, ph: Math.random() * 6.28, sw: 0.0004 + Math.random() * 0.0006, amp: 6 + Math.random() * 16,
+      a: 0.16 + Math.random() * 0.2 };
   }
   function size() {
     W = window.innerWidth; H = window.innerHeight;
     c.width = Math.round(W * dpr); c.height = Math.round(H * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    var n = Math.max(26, Math.min(72, Math.round(W * H / 22000)));
-    while (nodes.length < n) nodes.push(mk());
-    nodes.length = n;
-    for (var i = 0; i < nodes.length; i++) {
-      if (nodes[i].x > W) nodes[i].x = Math.random() * W;
-      if (nodes[i].y > H) nodes[i].y = Math.random() * H;
-    }
+    var n = Math.max(14, Math.min(38, Math.round(W * H / 32000)));
+    while (bubbles.length < n) bubbles.push(mk(true));
+    bubbles.length = n;
   }
   function draw(dt, now) {
     ctx.clearRect(0, 0, W, H);
-    var i, j, a, b, dx, dy, d, al;
-    for (i = 0; i < nodes.length; i++) {
-      a = nodes[i];
-      if (!reduce) {
-        a.x += a.vx * dt; a.y += a.vy * dt;
-        if (a.x < -10) a.x = W + 10; else if (a.x > W + 10) a.x = -10;
-        if (a.y < -10) a.y = H + 10; else if (a.y > H + 10) a.y = -10;
-      }
-    }
-    ctx.lineWidth = 1;
-    var linked = [];
-    for (i = 0; i < nodes.length; i++) {
-      for (j = i + 1; j < nodes.length; j++) {
-        a = nodes[i]; b = nodes[j];
-        dx = a.x - b.x; dy = a.y - b.y; d = Math.sqrt(dx * dx + dy * dy);
-        if (d < LINK) {
-          al = (1 - d / LINK) * 0.30;
-          ctx.strokeStyle = 'rgba(80,165,255,' + al.toFixed(3) + ')';
-          ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
-          if (a.hub || b.hub) linked.push([a, b]);
-        }
-      }
-    }
-    for (i = 0; i < nodes.length; i++) {
-      a = nodes[i];
-      ctx.fillStyle = a.amber ? 'rgba(245,164,0,.9)' : (a.hub ? 'rgba(0,194,255,.95)' : 'rgba(150,200,255,.7)');
-      ctx.beginPath(); ctx.arc(a.x, a.y, a.r, 0, 6.2832); ctx.fill();
-      if (a.hub) {
-        ctx.fillStyle = a.amber ? 'rgba(245,164,0,.12)' : 'rgba(0,194,255,.12)';
-        ctx.beginPath(); ctx.arc(a.x, a.y, a.r * 3.4, 0, 6.2832); ctx.fill();
-      }
-    }
-    if (reduce) return;
-    if (now > nextPulse && linked.length && pulses.length < 6) {
-      var p = linked[Math.floor(Math.random() * linked.length)];
-      pulses.push({ a: p[0], b: p[1], t: 0 });
-      nextPulse = now + 700 + Math.random() * 900;
-    }
-    for (i = pulses.length - 1; i >= 0; i--) {
-      var q = pulses[i]; q.t += dt * 0.0016;
-      if (q.t >= 1) { ripples.push({ x: q.b.x, y: q.b.y, r: 4, life: 1 }); pulses.splice(i, 1); continue; }
-      var px = q.a.x + (q.b.x - q.a.x) * q.t, py = q.a.y + (q.b.y - q.a.y) * q.t;
-      ctx.fillStyle = 'rgba(0,194,255,.22)'; ctx.beginPath(); ctx.arc(px, py, 6, 0, 6.2832); ctx.fill();
-      ctx.fillStyle = '#BDEBFF'; ctx.beginPath(); ctx.arc(px, py, 1.8, 0, 6.2832); ctx.fill();
-    }
-    for (i = ripples.length - 1; i >= 0; i--) {
-      var r = ripples[i]; r.r += dt * 0.04; r.life -= dt * 0.0011;
-      if (r.life <= 0) { ripples.splice(i, 1); continue; }
-      ctx.strokeStyle = 'rgba(0,194,255,' + (r.life * 0.45).toFixed(3) + ')';
-      ctx.beginPath(); ctx.arc(r.x, r.y, r.r, 0, 6.2832); ctx.stroke();
+    for (var i = 0; i < bubbles.length; i++) {
+      var b = bubbles[i];
+      if (!reduce) { b.y -= b.vy * dt; if (b.y < -b.r - 10) bubbles[i] = b = mk(false); }
+      var x = b.x + Math.sin(now * b.sw + b.ph) * b.amp;
+      var g = ctx.createRadialGradient(x - b.r * 0.35, b.y - b.r * 0.35, b.r * 0.1, x, b.y, b.r);
+      g.addColorStop(0, 'rgba(255,255,255,' + (b.a + 0.35).toFixed(2) + ')');
+      g.addColorStop(0.6, 'rgba(160,215,250,' + (b.a * 0.55).toFixed(2) + ')');
+      g.addColorStop(1, 'rgba(90,170,240,' + (b.a * 0.9).toFixed(2) + ')');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, b.y, b.r, 0, 6.2832); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,' + (b.a + 0.2).toFixed(2) + ')'; ctx.lineWidth = 1; ctx.stroke();
     }
   }
   function loop(now) {
