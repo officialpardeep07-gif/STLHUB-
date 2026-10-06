@@ -506,7 +506,7 @@ body.single[data-view=about] #pPage,body.single[data-view=contact] #pPage{displa
 /* Navbar: logo + name at the far left corner, menu at the far right */
 nav .wrap{max-width:none;padding-left:clamp(14px,2vw,32px);padding-right:clamp(14px,2vw,32px)}
 /* All photos (Drive etc.) are cropped to fill their frame */
-.ph img,.main img,.th img,.cph img,.ap-acc img,.ap .main img,.ap-gal .main img{object-fit:cover!important;padding:0!important}
+.ph img,.main img,.th img,.cph img,.ap-acc img,.ap .main img,.ap-gal .main img{object-fit:contain!important;padding:0!important}
 .th img{background:var(--mist)}
 </style>
 <style id="cropUi">
@@ -576,6 +576,8 @@ html .ap .main{box-shadow:0 12px 30px rgba(3,54,138,.18)}
 .sess .st{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;background:#9aa6c0}.sess .st.on{background:#22c55e}
 .sess .btn{flex:none;padding:8px 14px;font-size:13px}
 #sessAll{margin-top:4px}
+/* admin bar stays visible on every page while admin is logged in */
+html body.isadmin #adm{display:flex!important;position:fixed;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:60}
 </style>
 </head>
 <body>
@@ -828,7 +830,7 @@ if (live) {
   firebase.initializeApp(CFG);
   db = firebase.firestore(); st = firebase.storage(); au = firebase.auth();
   try { st.setMaxUploadRetryTime(30000); st.setMaxOperationRetryTime(30000); } catch (e) {}
-  au.onAuthStateChanged(async u => { if (!u) { sessDetach(); setAdmin(false); return; } setAdmin(await sessStart()); });
+  au.onAuthStateChanged(async u => { if (!u) { sessDetach(); localStorage.removeItem('adm_sid'); mySid = null; setAdmin(false); return; } setAdmin(await sessStart()); });
   try { firebase.analytics(); } catch (e) { console.warn('Analytics unavailable:', e && e.message); }
 } else {
   $('mode').hidden = false;
@@ -1009,7 +1011,7 @@ function openProduct(id, showManual, mode) {
     </div>
     <div class="ap-seg"><div class="ap-segin">${S.map((x, i) => `<button type="button" class="ap-tab" data-tab="${i}">${x[0]}</button>`).join('')}</div></div>
     <div id="pPanel"></div>
-    <div class="ap-share"><h3>Share this product</h3><p>Send the photos and product link to anyone.</p><div class="ap-cta"><button type="button" class="ap-btn" id="shP">Share photo + link</button><button type="button" class="ap-link" id="cpL">Copy link</button></div></div>
+    ${admin ? `<div class="ap-share"><h3>Share this product</h3><p>Send the photos and product link to anyone.</p><div class="ap-cta"><button type="button" class="ap-btn" id="shP">Share photo + link</button><button type="button" class="ap-link" id="cpL">Copy link</button></div></div>` : ''}
   </div>`;
   let gi = 0;
   const go = i => { if (!md.length) return; gi = (i + md.length) % md.length; $('vMain').innerHTML = mHTML(md[gi], p.name); box.querySelectorAll('.th [data-i]').forEach(x => x.classList.toggle('on', +x.dataset.i === gi)); };
@@ -1028,8 +1030,8 @@ function openProduct(id, showManual, mode) {
   panel.onclick = e => { const mb = e.target.closest('[data-more]'); if (mb) { const o = mb.parentElement.previousElementSibling.classList.toggle('open'); mb.textContent = o ? 'Show less' : 'Read more'; mb.setAttribute('aria-expanded', o); return; } const b = e.target.closest('[data-addfor]'); if (!b) return; if (!page) $('dView').close(); openForm(p); setTimeout(() => { const el = $(b.dataset.addfor); if (el) { el.scrollIntoView({ block: 'center' }); el.focus(); } }, 60); };
   if ($('delP')) $('delP').onclick = () => delProduct(p);
   if ($('edP')) $('edP').onclick = () => { if (!page) $('dView').close(); openForm(p); };
-  $('shP').onclick = () => sharePhoto(p, link);
-  $('cpL').onclick = () => (navigator.clipboard ? navigator.clipboard.writeText(link) : Promise.reject()).then(() => toast(location.protocol === 'file:' && !SITE_URL ? 'Link copied, but it will work on other phones only once the website is online' : 'Link copied'), () => prompt('Copy link:', link));
+  if ($('shP')) $('shP').onclick = () => sharePhoto(p, link);
+  if ($('cpL')) $('cpL').onclick = () => (navigator.clipboard ? navigator.clipboard.writeText(link) : Promise.reject()).then(() => toast(location.protocol === 'file:' && !SITE_URL ? 'Link copied, but it will work on other phones only once the website is online' : 'Link copied'), () => prompt('Copy link:', link));
   if (!page) $('dView').showModal();
   if (showManual) { const j = S.findIndex(x => x[0] === 'Manual'); if (j >= 0) tabs[j].click(); }
 }
@@ -1319,11 +1321,14 @@ $('sessB').onclick = async e => {
 };
 
 function setAdmin(v) {
+  const changed = v !== admin;
   admin = v;
+  document.body.classList.toggle('isadmin', v);
   idleArm(v);
   $('adminBtn').textContent = v ? 'Add product' : 'Admin login';
   $('outBtn').hidden = !v; $('sessBtn').hidden = !(v && live); $('siteBtn').hidden = !v; $('admT').textContent = v ? '🔓' : '🔒'; $('admMenu').hidden = true;
   render();
+  if (changed && window._curPid && document.body.classList.contains('single') && products.length && $('pBody')) openProduct(window._curPid, false, 'page');
 }
 $('admT').onclick = () => { if (!admin) $('dLogin').showModal(); else $('admMenu').hidden = !$('admMenu').hidden; };
 $('admMenu').onclick = () => { $('admMenu').hidden = true; };
@@ -1576,6 +1581,7 @@ if (qp) {
         products = d.exists ? [{id: d.id, ...d.data()}] : [];
       } catch (e) { toast('Could not load product: ' + e.message); }
     }
+    window._curPid = id;
     openProduct(id, location.search.includes('m=1'), 'page');
   })();
 } else load();
