@@ -266,7 +266,7 @@ body:not([data-view=home]) .hero .wrap,body.single .hero .wrap{padding-top:44px;
 @keyframes fbPulse{0%,100%{box-shadow:0 0 0 3px rgba(34,197,94,.3)}50%{box-shadow:0 0 0 8px rgba(34,197,94,.08)}}
 
 /* Shared product link: show ONLY that product (no menu, hero, other products, contact/about, admin) */
-body:not(.showadm) #adm,body.single nav .links,body.single #burger,body.single #home,body.single .hero,body.single #backAll,body.single #adm,body.single #mode,body.single #products,body.single #manuals,body.single #about,body.single #contact,body.single #aboutMini{display:none!important}
+body.single nav .links,body.single #burger,body.single #home,body.single .hero,body.single #backAll,body.single #adm,body.single #mode,body.single #products,body.single #manuals,body.single #about,body.single #contact,body.single #aboutMini{display:none!important}
 body.single .brand{pointer-events:none;cursor:default}
 /* ===== Product categories (home) + category page ===== */
 #catsSec,#catPage{display:none}
@@ -578,6 +578,8 @@ html .ap .main{box-shadow:0 12px 30px rgba(3,54,138,.18)}
 #sessAll{margin-top:4px}
 /* admin bar stays visible on every page while admin is logged in */
 html body.isadmin #adm{display:flex!important;position:fixed;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:60}
+/* shared product link: visitors never see any admin control */
+body.single:not(.isadmin) #adm,body.single:not(.isadmin) #adminBtn,body.single:not(.isadmin) #dLogin,body.single:not(.isadmin) .ap-admrow,body.single:not(.isadmin) [data-addph],body.single:not(.isadmin) [data-addfor]{display:none!important}
 </style>
 </head>
 <body>
@@ -818,7 +820,8 @@ const CFG = {
 /* ===================================================== */
 
 /* Once the website is online, write its address here, e.g. "https://sanchartelesystems.web.app/" – product links are built from it */
-const SITE_URL = "";
+/* Public website address used in shared links: <SITE_URL>/<model name> */
+const SITE_URL = "https://sanchartelesystems.com";
 
 const live = !!CFG.apiKey;
 let db, st, au, products = [], admin = false, cat = 'All', query = '';
@@ -968,9 +971,21 @@ function render() {
   
 }
 
-function pLink(id) {
-  const base = SITE_URL || (location.origin + location.pathname);
-  return base + '?p=' + encodeURIComponent(id);
+function pSlug(p) { return String(p.model || p.name || p.id).trim().replace(/[\/\\?#%&]+/g, '').replace(/\s+/g, '-'); }
+function pathSlug() {
+  if (!/^https?:$/.test(location.protocol)) return '';
+  let t = location.pathname.replace(/^\/+|\/+$/g, '');
+  if (!t || t.includes('/') || t.includes('.')) return '';
+  try { t = decodeURIComponent(t); } catch (e) {}
+  return t;
+}
+const webLinks = () => /^https?:$/.test(location.protocol);
+function pLink(p) {
+  if (SITE_URL) return SITE_URL.replace(/\/+$/, '') + '/' + encodeURIComponent(pSlug(p));
+  return webLinks() ? location.origin + '/' + encodeURIComponent(pSlug(p)) : location.origin + location.pathname + '?p=' + encodeURIComponent(p.id);
+}
+function goProduct(p, manual) {
+  location.href = webLinks() ? '/' + encodeURIComponent(pSlug(p)) + (manual ? '?m=1' : '') : location.pathname + '?p=' + encodeURIComponent(p.id) + (manual ? '&m=1' : '');
 }
 async function sharePhoto(p, link) {
   const text = p.name + (p.model ? ' (' + p.model + ')' : '') + ' – photos & manual:\n' + link;
@@ -996,7 +1011,7 @@ function openProduct(id, showManual, mode) {
   (page ? $('pT') : $('vT')).textContent = p.name;
   if (page) { document.title = p.name + ' – Sanchar Telesystems'; $('pT').style.display = 'none'; }
   const md = media(p); const S = secs(p);
-  const link = pLink(p.id);
+  const link = pLink(p);
   const bgsHTML = `<div class="bgs"><small>Background</small>${BGS.map(([k, n, c]) => `<button class="bgsw ${k === curBg ? 'on' : ''}" data-b="${k}" title="${n}" aria-label="${n}" style="background:${c}"></button>`).join('')}</div>`;
   box.innerHTML = `<div class="ap">
     <div class="ap-hero">
@@ -1011,7 +1026,7 @@ function openProduct(id, showManual, mode) {
     </div>
     <div class="ap-seg"><div class="ap-segin">${S.map((x, i) => `<button type="button" class="ap-tab" data-tab="${i}">${x[0]}</button>`).join('')}</div></div>
     <div id="pPanel"></div>
-    ${admin ? `<div class="ap-share"><h3>Share this product</h3><p>Send the photos and product link to anyone.</p><div class="ap-cta"><button type="button" class="ap-btn" id="shP">Share photo + link</button><button type="button" class="ap-link" id="cpL">Copy link</button></div></div>` : ''}
+    <div class="ap-share"><h3>Share this product</h3><p>Send the photos and product link to anyone.</p><div class="ap-cta"><button type="button" class="ap-btn" id="shP">Share photo + link</button><button type="button" class="ap-link" id="cpL">Copy link</button></div></div>
   </div>`;
   let gi = 0;
   const go = i => { if (!md.length) return; gi = (i + md.length) % md.length; $('vMain').innerHTML = mHTML(md[gi], p.name); box.querySelectorAll('.th [data-i]').forEach(x => x.classList.toggle('on', +x.dataset.i === gi)); };
@@ -1037,12 +1052,13 @@ function openProduct(id, showManual, mode) {
 }
 
 async function delProduct(p) {
+  if (!admin) return;
   if (!confirm('"' + p.name + '" will be deleted. Continue?')) return;
   try {
     if (live) await db.collection('products').doc(p.id).delete();
     await Promise.all([...media(p).map(m => m.url), ...(p.accessories || []).map(a => a.image), p.manual].filter(Boolean).map(delFile));
     products = products.filter(x => x.id !== p.id);
-    if (document.body.classList.contains('single')) { location.href = location.pathname; return; }
+    if (document.body.classList.contains('single')) { location.href = webLinks() ? '/' : location.pathname; return; }
     $('dView').close(); render(); toast('Deleted');
   } catch (e) { toast('Error: ' + e.message); }
 }
@@ -1162,6 +1178,7 @@ function renderOld() {
   $('oldImgs').innerHTML = keep.map((m, i) => `<div style="position:relative">${thumb(m)}<button type="button" class="x" data-rm="${i}" aria-label="Remove file" style="position:absolute;top:-6px;right:-6px;width:22px;height:22px;font-size:11px">✕</button></div>`).join('');
 }
 function openForm(p) {
+  if (!admin) return;
   editing = p || null;
   $('fAdd').reset();
   keep = p ? [...media(p)] : [];
@@ -1330,10 +1347,13 @@ function setAdmin(v) {
   render();
   if (changed && window._curPid && document.body.classList.contains('single') && products.length && $('pBody')) openProduct(window._curPid, false, 'page');
 }
-$('admT').onclick = () => { if (!admin) $('dLogin').showModal(); else $('admMenu').hidden = !$('admMenu').hidden; };
+/* Shared product link = read-only for visitors: no admin login, no admin shortcuts, no edit/delete */
+function sharedGuest() { return document.body.classList.contains('single') && !admin; }
+(function () { const dl = $('dLogin'), orig = dl.showModal.bind(dl); dl.showModal = function () { if (sharedGuest()) return; orig(); }; })();
+$('admT').onclick = () => { if (sharedGuest()) return; if (!admin) $('dLogin').showModal(); else $('admMenu').hidden = !$('admMenu').hidden; };
 $('admMenu').onclick = () => { $('admMenu').hidden = true; };
-document.addEventListener('keydown', e => { if (e.altKey && !e.ctrlKey && !e.metaKey && (e.code === 'KeyS' || (e.key || '').toLowerCase() === 's')) { e.preventDefault(); document.body.classList.toggle('showadm'); if (!document.body.classList.contains('showadm')) $('admMenu').hidden = true; } });
 $('adminBtn').onclick = () => {
+  if (sharedGuest()) return;
   if (admin) openForm(null); else $('dLogin').showModal();
   $('links').classList.remove('open');
 };
@@ -1346,6 +1366,7 @@ $('lPT').onclick = () => {
   $('lPT').setAttribute('aria-label', show ? 'Hide password' : 'Show password'); $('lPT').setAttribute('aria-pressed', show);
 };
 $('fLogin').onsubmit = async e => {
+  if (sharedGuest()) { e.preventDefault(); return; }
   e.preventDefault();
   const u = $('lE').value.trim().toLowerCase(), p = $('lP').value;
   try {
@@ -1363,8 +1384,8 @@ document.addEventListener('click', e => {
   else if (t.closest('[data-close]')) t.closest('dialog').close();
   else if (t.dataset.cat) { cat = t.dataset.cat; render(); }
   else if (t.closest('[data-dl]')) dlManual(t.closest('[data-dl]').dataset.dl);
-  else if (t.closest('.card')) location.href = location.pathname + '?p=' + encodeURIComponent(t.closest('.card').dataset.id);
-  else if (t.dataset.view && t.tagName === 'BUTTON') location.href = location.pathname + '?p=' + encodeURIComponent(t.dataset.view) + '&m=1';
+  else if (t.closest('.card')) { const pr = products.find(x => x.id === t.closest('.card').dataset.id); if (pr) goProduct(pr, false); }
+  else if (t.dataset.view && t.tagName === 'BUTTON') { const pr = products.find(x => x.id === t.dataset.view); if (pr) goProduct(pr, true); }
   else if (t.tagName === 'DIALOG') t.close();
 });
 $('heroSearch').onsubmit = e => { e.preventDefault(); query = $('q').value.trim(); render(); location.hash = 'products'; };
@@ -1554,7 +1575,7 @@ function showView() {
   const h = location.hash.replace('#', '');
   let v = VIEWS.includes(h) ? h : 'home';
   if (h.startsWith('c=')) { v = 'category'; curCat = h.slice(2); }
-  const isSingle = document.body.classList.contains('single') || !!(new URLSearchParams(location.search).get('p') || /^#p=/.test(location.hash));
+  const isSingle = document.body.classList.contains('single') || !!(new URLSearchParams(location.search).get('p') || /^#p=/.test(location.hash) || pathSlug());
   if (isSingle) v = (h === 'about' || h === 'contact') ? h : 'product';
   document.body.dataset.view = v;
   const nav = v === 'category' ? 'home' : v;
@@ -1568,18 +1589,27 @@ window.addEventListener('hashchange', showView);
 showView();
 
 const qp = new URLSearchParams(location.search).get('p') || (location.hash.match(/^#p=(.+)$/) || [])[1];
-if (qp) {
+if (qp || pathSlug()) {
   document.body.classList.add('single');
   if (/^#p=/.test(location.hash)) $('svProd').setAttribute('href', location.hash);
   showView();
   const brand = document.querySelector('.brand'); if (brand) brand.removeAttribute('href');
   (async () => {
-    const id = decodeURIComponent(qp);
+    let id = qp ? decodeURIComponent(qp) : '';
     if (live) {
       try {
-        const d = await db.collection('products').doc(id).get();
-        products = d.exists ? [{id: d.id, ...d.data()}] : [];
+        if (id) {
+          const d = await db.collection('products').doc(id).get();
+          products = d.exists ? [{id: d.id, ...d.data()}] : [];
+        } else {
+          const want = pathSlug().toLowerCase(), all = await db.collection('products').get();
+          const m = all.docs.map(d => ({id: d.id, ...d.data()})).find(x => pSlug(x).toLowerCase() === want);
+          products = m ? [m] : []; id = m ? m.id : '__none__';
+        }
       } catch (e) { toast('Could not load product: ' + e.message); }
+    } else if (!id) {
+      const want = pathSlug().toLowerCase(), m = products.find(x => pSlug(x).toLowerCase() === want);
+      id = m ? m.id : '__none__';
     }
     window._curPid = id;
     openProduct(id, location.search.includes('m=1'), 'page');
@@ -1764,7 +1794,7 @@ if (qp) {
         prev.onload = function(){ prev._k && place(prev); }; prev.src = src;
         chips(ctx);
         if (k) { B = { l: k[0] / 100 * W, t: k[1] / 100 * H, r: (k[0] + k[2]) / 100 * W, b: (k[1] + k[3]) / 100 * H }; pick('free', null, false); }
-        else { B = { l: 0, t: 0, r: W, b: H }; pick('fit', ctx, true); }
+        else { B = { l: 0, t: 0, r: W, b: H }; pick('orig', nw / nh, true); }
       };
       im.onerror = function(){ im.onload = im.onerror = null; resolve = null; toast('Is link ki photo load nahi hui (ya ye photo nahi hai) – crop skip kiya', 5000); res(null); };
       im.src = src;
@@ -1782,11 +1812,6 @@ if (qp) {
     inp.dispatchEvent(new Event('input', { bubbles: true })); inp.dispatchEvent(new Event('change', { bubbles: true }));
     busy = false;
   }
-  document.addEventListener('change', function(e){
-    var t = e.target; if (busy || !t.matches || !t.matches(SEL)) return;
-    var v = t.value.trim(); if (!v || !driveId(v) || /#k=/.test(v)) return;
-    edit(t);
-  });
   document.addEventListener('click', function(e){
     var b = e.target.closest && e.target.closest('[data-crop]'); if (!b) return;
     var inp = b.previousElementSibling; if (!inp || inp.tagName !== 'INPUT') return;
