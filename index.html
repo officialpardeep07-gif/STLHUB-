@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>(function(){var s=location.search,h=location.hash;if(/[?&]p=/.test(s)||/^#p=/.test(h))document.documentElement.classList.add("shared");})();</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#050B1A">
@@ -578,6 +579,8 @@ html .ap .main{box-shadow:0 12px 30px rgba(3,54,138,.18)}
 #sessAll{margin-top:4px}
 /* admin bar stays visible on every page while admin is logged in */
 html body.isadmin #adm{display:flex!important;position:fixed;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:60}
+/* SHARED PRODUCT LINK = read-only. No admin / edit / delete / login UI, ever. */
+html.shared #adm,html.shared body #adm,html.shared body.isadmin #adm,html.shared #admT,html.shared #admMenu,html.shared #adminBtn,html.shared #siteBtn,html.shared #sessBtn,html.shared #outBtn,html.shared .ap-admrow,html.shared .ap-adm,html.shared .gadd,html.shared .cedit,html.shared #edCat,html.shared #dLogin,html.shared #upBar{display:none!important}
 </style>
 </head>
 <body>
@@ -821,6 +824,7 @@ const CFG = {
 const SITE_URL = "";
 
 const live = !!CFG.apiKey;
+const SHARED = document.documentElement.classList.contains("shared");
 let db, st, au, products = [], admin = false, cat = 'All', query = '';
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -830,7 +834,7 @@ if (live) {
   firebase.initializeApp(CFG);
   db = firebase.firestore(); st = firebase.storage(); au = firebase.auth();
   try { st.setMaxUploadRetryTime(30000); st.setMaxOperationRetryTime(30000); } catch (e) {}
-  au.onAuthStateChanged(async u => { if (!u) { sessDetach(); localStorage.removeItem('adm_sid'); mySid = null; setAdmin(false); return; } setAdmin(await sessStart()); });
+  if (!SHARED) au.onAuthStateChanged(async u => { if (!u) { sessDetach(); localStorage.removeItem('adm_sid'); mySid = null; setAdmin(false); return; } setAdmin(await sessStart()); });
   try { firebase.analytics(); } catch (e) { console.warn('Analytics unavailable:', e && e.message); }
 } else {
   $('mode').hidden = false;
@@ -1037,6 +1041,7 @@ function openProduct(id, showManual, mode) {
 }
 
 async function delProduct(p) {
+  if (SHARED || !admin) return;
   if (!confirm('"' + p.name + '" will be deleted. Continue?')) return;
   try {
     if (live) await db.collection('products').doc(p.id).delete();
@@ -1161,7 +1166,7 @@ function renderOld() {
   $('oldBox').hidden = !keep.length;
   $('oldImgs').innerHTML = keep.map((m, i) => `<div style="position:relative">${thumb(m)}<button type="button" class="x" data-rm="${i}" aria-label="Remove file" style="position:absolute;top:-6px;right:-6px;width:22px;height:22px;font-size:11px">✕</button></div>`).join('');
 }
-function openForm(p) {
+function openForm(p) { if (SHARED) return;
   editing = p || null;
   $('fAdd').reset();
   keep = p ? [...media(p)] : [];
@@ -1320,7 +1325,9 @@ $('sessB').onclick = async e => {
   } catch (err) { toast('Failed: ' + err.message, 6000); }
 };
 
+const isSharedView = () => document.body.classList.contains('single') || !!(new URLSearchParams(location.search).get('p') || /^#p=/.test(location.hash));
 function setAdmin(v) {
+  v = !!v && !SHARED && !isSharedView(); // shared product link: never admin (no edit/delete/login)
   const changed = v !== admin;
   admin = v;
   document.body.classList.toggle('isadmin', v);
@@ -1330,9 +1337,10 @@ function setAdmin(v) {
   render();
   if (changed && window._curPid && document.body.classList.contains('single') && products.length && $('pBody')) openProduct(window._curPid, false, 'page');
 }
-$('admT').onclick = () => { if (!admin) $('dLogin').showModal(); else $('admMenu').hidden = !$('admMenu').hidden; };
+$('admT').onclick = () => { if (SHARED) return; if (!admin) $('dLogin').showModal(); else $('admMenu').hidden = !$('admMenu').hidden; };
 $('admMenu').onclick = () => { $('admMenu').hidden = true; };
 $('adminBtn').onclick = () => {
+  if (SHARED) return;
   if (admin) openForm(null); else $('dLogin').showModal();
   $('links').classList.remove('open');
 };
